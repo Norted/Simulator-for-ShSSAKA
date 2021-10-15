@@ -1,2 +1,2 @@
-# Simulator-for-SSAKA
+# Simulator for SSAKA protocol
 Semestral wrok repository.
