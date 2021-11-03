@@ -1,6 +1,13 @@
 # VS Code folder
 .vscode
 
+# libgcrypt folder
+libgcrypt
+
+# binary files
+GUI
+main_test
+
 # Prerequisites
 *.d
 
