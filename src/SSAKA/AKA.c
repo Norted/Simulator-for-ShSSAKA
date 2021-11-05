@@ -3,9 +3,9 @@
 #include <time.h>
 #include <math.h>
 #include "AKA.h"
-// #include <gcrypt.h>
+//#include <gcrypt.h>
 
-// function declarations
+// supportive functions declarations
 unsigned int hash(unsigned int Y, unsigned int sigma, unsigned int kappa);
 void keyPrinter(struct Keychain keys);
 struct Keychain initKeys();
