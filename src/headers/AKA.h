@@ -1,6 +1,8 @@
 #ifndef __AKA_H__   /* Include guard */
 #define __AKA_H__
 
+//Konvence :-)
+
 // structures definition
 struct KEYCHAIN {
     unsigned int pk;
