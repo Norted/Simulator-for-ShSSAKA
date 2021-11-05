@@ -1,17 +1,17 @@
 #include <stdio.h>
 
-int CLIENT_ADDSHARE() {
+int SSAKA_CLIENT_ADDSHARE() {
     return 0;
 }
 
-int CLIENT_REVSHARE() {
+int SSAKA_CLIENT_REVSHARE() {
     return 0;
 }
 
-int CLIENT_PROOFVERIFY() {
+int SSAKA_CLIENT_PROOFVERIFY() {
     return 0;
 }
 
-int DEVICE_PROOF() {
+int SSAKA_DEVICE_PROOF() {
     return 0;
 }

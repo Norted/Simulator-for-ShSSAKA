@@ -1,80 +1,39 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <AKA.h>
-#include <SSAKA.h>
+#include "AKA.h"
+// #include "headers/SSAKA.h"
 
-/////////////////////////////////////////////////////////////////////
-// SETUP ////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////
-
-// keychain struct definition
-struct Keychain {
-    unsigned int pk;
-    unsigned int sk;
-    unsigned int ID;
-};
-
-// function headers
-void key_printer(struct Keychain keys);
-struct Keychain init_keys();
-
-// globals
-unsigned int MOD = 18;
-unsigned int G = 0;
-unsigned int GENERATORS[6] = {4, 7, 9, 10, 13, 16};
-unsigned int ID_COUNTER = 1;
-
-int generators_len = 5;
-int max_number = 100;
-int minimum_number = 1;
 
 /////////////////////////////////////////////////////////////////////
 // MAIN /////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 int main(){
+    unsigned int Y = 100;
+    struct SERVER_SIGN server;
+    
     /*  AKA-SETUP and AKA-CLIENT-REGISTER
      *      1) randomly initialize generator from GENERATORS
      *      2) generate keys for client and server side
      */
-    srand(3);
-    G = GENERATORS[rand()%generators_len];
+    aka_setup();
     
-    struct Keychain client_keys = init_keys();
-    struct Keychain server_keys = init_keys();
-
-    /*  AKA-SERVER-SIGNVERIFY   */
-
-    /*  AKA-CLIENT-PROOFVERIFY  */
+    /*  AKA-SERVER-SIGNVERIFY(Y, sk_s, pk_c)
+     *      Y, sigma    →   AKA-CLIENT-PROOFVERIFY(Y, sigma)
+     *                  ←   tau_c (value 0/1), pi, kappa
+     *      tau_s (value 0/1), kappa
+     */
+    server = aka_server_signverify(Y, SERVER_KEYS.sk, CLIENT_KEYS.pk);
+    if (server.tau_s == 0) {
+        printf("TAU_S = %d\nProtocol ends.\n", server.tau_s);
+        return -1;
+    }
+    else {
+        printf("TAU_S = %d\nProtocol continues.\n", server.tau_s);
+    }
+    
     return 0;
 }
-
-/////////////////////////////////////////////////////////////////////
-// FUNCTION DECLARATIONS ////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////
-
-// print to console the keychain variables
-void key_printer(struct Keychain keys) {
-    printf("ID: %u", keys.ID);
-    printf("PK: %u", keys.pk);
-    printf("SK: %u", keys.sk);
-    
-    return;
-}
-
-// initialize the keychain with computed values
-struct Keychain init_keys() {
-    struct Keychain keys;
-    keys.sk = (unsigned int) (rand() % (max_number + 1 - minimum_number) + minimum_number)%MOD;
-    keys.pk = (unsigned int) pow((double) G, (double) keys.sk);
-    keys.ID = ID_COUNTER++;
-    
-    key_printer(keys);
-    return keys;
-}
-
-
-
 
 /* RESOURCES
  *
