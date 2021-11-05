@@ -1,17 +1,22 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <math.h>
+//#include <gcrypt.h>
+//#include "SSAKA.h"
 
-int SSAKA_CLIENT_ADDSHARE() {
+int ssaka_ClientAddShare() {
     return 0;
 }
 
-int SSAKA_CLIENT_REVSHARE() {
+int ssaka_ClientRevShare() {
     return 0;
 }
 
-int SSAKA_CLIENT_PROOFVERIFY() {
+int ssaka_ClientProofVerify() {
     return 0;
 }
 
-int SSAKA_DEVICE_PROOF() {
+int ssaka_DeviceProof() {
     return 0;
 }

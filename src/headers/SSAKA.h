@@ -1,9 +1,9 @@
 #ifndef __SSAKA_H__
 #define __SSAKA_H__
 
-int SSAKA_CLIENT_ADDSHARE();
-int SSAKA_CLIENT_REVSHARE();
-int SSAKA_CLIENT_PROOFVERIFY();
-int SSAKA_DEVICE_PROOF();
+int ssaka_ClientAddShare();
+int ssaka_ClientRevShare();
+int ssaka_ClientProofVerify();
+int ssaka_DeviceProof();
 
 #endif
