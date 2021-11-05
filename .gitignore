@@ -4,6 +4,7 @@ libgcrypt
 # binary files
 GUI
 main_test
+AKA
 
 # Prerequisites
 *.d
