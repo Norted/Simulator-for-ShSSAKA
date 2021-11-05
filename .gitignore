@@ -2,9 +2,9 @@
 libgcrypt
 
 # binary files
+AKA
 GUI
 main_test
-AKA
 
 # Prerequisites
 *.d
