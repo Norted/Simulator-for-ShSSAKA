@@ -6,9 +6,9 @@
 //#include <gcrypt.h>
 
 // supportive functions declarations
-unsigned int hash(unsigned int Y, unsigned int sigma, unsigned int kappa);
-void keyPrinter(struct Keychain keys);
-struct Keychain initKeys();
+unsigned int _hash(unsigned int Y, unsigned int sigma, unsigned int kappa);
+void _keyPrinter(struct Keychain keys);
+struct Keychain _initKeys();
 
 /*  --- GLOBALS ---
  *  |-> g_q ................. order of multiplicative group Z*_q
@@ -50,9 +50,9 @@ void aka_setup() {
     g_g = g_generators[rand()%g_generatorsLen];
     
     printf("---CLIENT---\n");
-    g_clientKeys = initKeys();
+    g_clientKeys = _initKeys();
     printf("---SERVER---\n");
-    g_serverKeys = initKeys();
+    g_serverKeys = _initKeys();
     printf("\n");
 
     return;
@@ -66,7 +66,7 @@ struct ServerSign aka_serverSignVerify (unsigned int Y, unsigned int sk_s, unsig
     unsigned int r_s = (rand() % (g_maxRandomNumber + 1 - g_minRandomNumber) + g_minRandomNumber)%g_q;
     unsigned int t_s = (unsigned int) pow((double) g_g, (double) r_s);
     
-    sigma[0] = hash(Y, t_s, 0U);        //e_s
+    sigma[0] = _hash(Y, t_s, 0U);        //e_s
     sigma[1] = (r_s - sigma[0]*sk_s)%g_q; //s_s
     
     /*  
@@ -79,7 +79,7 @@ struct ServerSign aka_serverSignVerify (unsigned int Y, unsigned int sk_s, unsig
     unsigned int t_chck = (unsigned int) pow((double) g_g, (double) client.pi[1]) * pow((double) pk_c, (double) client.pi[0]);
     server.kappa = (unsigned int) pow((double) t_chck, (double) r_s);
     
-    if (client.pi[0] == hash(Y, t_chck, server.kappa)) {
+    if (client.pi[0] == _hash(Y, t_chck, server.kappa)) {
         server.tau_s = 1;
     }
     else {
@@ -93,7 +93,7 @@ struct ClientProof aka_clientProofVerify (unsigned int Y, unsigned int sigma[2],
     struct ClientProof client;
     unsigned int t_s_chck = (unsigned int) pow((double) g_g, (double) sigma[1]) * (unsigned int) pow((double) pk_s, (double) sigma[0]);
     
-    if (sigma[0] == hash(Y, t_s_chck, 0U)) {
+    if (sigma[0] == _hash(Y, t_s_chck, 0U)) {
         client.tau_c = 1;
     }
     else {
@@ -105,7 +105,7 @@ struct ClientProof aka_clientProofVerify (unsigned int Y, unsigned int sigma[2],
     unsigned int t = (unsigned int) pow((double) g_g, (double) r_c);
 
     client.kappa = (unsigned int) pow((double) t_s_chck, (double) r_c);
-    client.pi[0] = hash(Y, t, client.kappa);        //e_c
+    client.pi[0] = _hash(Y, t, client.kappa);        //e_c
     client.pi[1] = (r_c - client.pi[0] * sk_c)%g_q;   //s_c
 
     return client;
@@ -115,7 +115,7 @@ struct ClientProof aka_clientProofVerify (unsigned int Y, unsigned int sigma[2],
 /*  --- SUPPORT FUNCTIONS ---   */
 
 // print to console the keychain variables
-void keyPrinter(struct Keychain keys) {
+void _keyPrinter(struct Keychain keys) {
     printf("ID: %u\n", keys.ID);
     printf("PK: %u\n", keys.pk);
     printf("SK: %u\n", keys.sk);
@@ -124,17 +124,17 @@ void keyPrinter(struct Keychain keys) {
 }
 
 // initialize the keychain with computed values
-struct Keychain initKeys() {
+struct Keychain _initKeys() {
     struct Keychain keys;
     keys.sk = (unsigned int) (rand() % (g_maxRandomNumber + 1 - g_minRandomNumber) + g_minRandomNumber)%g_q;
     keys.pk = (unsigned int) pow((double) g_g, (double) keys.sk);
     keys.ID = g_idCounter++;
     
-    keyPrinter(keys);
+    _keyPrinter(keys);
     return keys;
 }
 
 // momentally used instead of chosen hash from suite
-unsigned int hash(unsigned int Y, unsigned int t_s, unsigned int kappa) {
+unsigned int _hash(unsigned int Y, unsigned int t_s, unsigned int kappa) {
     return (unsigned int) ((Y * pow(10, (double) log10(t_s)+1) + t_s)*pow(10, (double) log10(kappa)+1))%g_q;
 }

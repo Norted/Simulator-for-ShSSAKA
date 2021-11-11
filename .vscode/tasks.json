@@ -24,6 +24,8 @@
                 "-I${workspaceFolder}/src/headers",
                 "${workspaceFolder}/src/SSAKA/AKA.c",
                 //"${workspaceFolder}/src/SSAKA/SSAKA.c",
+                //"${workspaceFolder}/src/paillier/paillier.c",
+                //"${workspaceFolder}/src/paillier/primes.c",
                 "${workspaceFolder}/src/main_test.c",
                 "-lgtk-3",
                 "-lgdk-3",

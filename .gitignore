@@ -1,5 +1,7 @@
-# libgcrypt folder
+# libraries folder
 libgcrypt
+libpolynomial
+sss
 
 # binary files
 AKA

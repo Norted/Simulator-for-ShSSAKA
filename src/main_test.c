@@ -1,13 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "AKA.h"
-// #include "SSAKA.h"
+// local libs
+#include <AKA.h>
+#include <SSAKA.h>
 
 
-/////////////////////////////////////////////////////////////////////
-// MAIN /////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////
 int main(){
     unsigned int Y = 100;
     struct ServerSign server;
@@ -18,6 +16,11 @@ int main(){
      */
     aka_setup();
     
+    /*  SSAKA-SERVER-SIGNVERIFY */
+
+    /*  SSAKA-CLIENT-PROOFVERIFY(Y, sigma, pk_s, sk_c)  */
+
+
     /*  AKA-SERVER-SIGNVERIFY(Y, sk_s, pk_c)
      *      Y, sigma    →   AKA-CLIENT-PROOFVERIFY(Y, sigma)
      *                  ←   tau_c (value 0/1), pi, kappa
