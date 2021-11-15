@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-// local libs
-#include <AKA.h>
+// local headers
 #include <SSAKA.h>
+#include <paillier.h>
 
 
 int main(){
@@ -12,9 +12,9 @@ int main(){
     
     /*  AKA-SETUP and AKA-CLIENT-REGISTER
      *      1) randomly initialize generator from GENERATORS
-     *      2) generate keys for client and server side
+     *      2) generate keys for devices, client and server side
      */
-    aka_setup();
+    setup();
     
     /*  SSAKA-SERVER-SIGNVERIFY */
 
@@ -34,7 +34,19 @@ int main(){
     else {
         printf("TAU_S = %d\nProtocol continues.\n", server.tau_s);
     }
+
     
+    /* My PAILLIER test */
+    unsigned long long bits = 16;
+    int secret = 4;
+    printf("\n\n---PAILLIER test---\n");
+    struct paillierKeyring p_keyring = generate_keypair(bits);
+    printf("\n\nSECRET: %d\n", secret);
+    unsigned long long enc = encrypt(p_keyring.pk, secret);
+    printf("ENC: %llu\n", enc);
+    unsigned long long dec = decrypt(p_keyring, enc);
+    printf("DEC: %llu\n", dec);
+
     return 0;
 }
 
