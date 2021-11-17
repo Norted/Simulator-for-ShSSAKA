@@ -79,6 +79,12 @@ struct ServerSign aka_serverSignVerify (unsigned int Y, unsigned int sk_s, unsig
     struct ServerSign server;
     struct ClientProof client;
 
+    if (Y == 0 || sk_s == 0 || pk_c == 0) {
+        server.tau_s = 0;
+        printf("Y, sk_s or pk_c == 0!\n");
+        return server;
+    }
+
     unsigned int r_s = (rand() % (g_maxRandomNumber + 1 - g_minRandomNumber) + g_minRandomNumber)%g_q;
     unsigned int t_s = (unsigned int) pow((double) g_g, (double) r_s);
     
@@ -156,6 +162,9 @@ struct Share ssaka_ClientAddShare(unsigned int sk_new[][2], unsigned int sk_c, u
     int size = sizeof(sk_new) / sizeof(sk_new[0]);
     for (int i = 0; i < size; i++) {
         // TODO
+        share.pk_c = 0;
+        share.pk_c_dash = 0;
+        share.sk_c = 0;
     }
     return share;
 }
@@ -166,6 +175,9 @@ struct Share ssaka_ClientRevShare(unsigned int sk_rev[][2], unsigned int sk_c, u
     int size = sizeof(sk_rev) / sizeof(sk_rev[0]);
     for (int i = 0; i < size; i++) {
         // TODO
+        share.pk_c = 0;
+        share.pk_c_dash = 0;
+        share.sk_c = 0;
     }
     return share;
 }

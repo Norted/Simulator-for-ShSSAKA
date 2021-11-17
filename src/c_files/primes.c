@@ -77,11 +77,10 @@ unsigned long long generate_prime(int bits) {
     unsigned long long stop = 0;
     unsigned long long possible = 0;
     while (stop == 0) {
-        possible = (unsigned long long) (random() % (unsigned long long) (((_binpow(2, bits, 10007) + 1) - _binpow(2, bits-1, 10007) + 1) + _binpow(2, (bits-1) + 1, 10007))) | 1;
+        possible = (unsigned long long) (random() % (unsigned long long) (((_binpow(2, bits, 100007) + 1) - _binpow(2, bits-1, 100007) + 1) + _binpow(2, (bits-1) + 1, 100007))) | 1;
         if (is_probably_prime(possible, bits) == 1) {
             stop = 1;
-        }
-            
+        } 
     }
     return possible;
 }
@@ -97,4 +96,4 @@ unsigned long long _binpow(unsigned long long base, unsigned long long exp, unsi
         exp >>= 1;
     }
     return res;
- }
+}

@@ -26,7 +26,8 @@
                 "${workspaceFolder}/src/c_files/SSAKA.c",
                 "${workspaceFolder}/src/c_files/paillier.c",
                 "${workspaceFolder}/src/c_files/primes.c",
-                "${workspaceFolder}/src/main_test.c",
+                //"${workspaceFolder}/src/main_test.c",
+                "${workspaceFolder}/src/GUI.c",
                 "-lgtk-3",
                 "-lgdk-3",
                 "-latk-1.0",
@@ -46,7 +47,8 @@
                 "-lpolynomial",
                 "-lm",
                 "-o",
-                "${workspaceFolder}/src/main_test"  //"${fileDirname}/${fileBasenameNoExtension}"
+                "${fileDirname}/${fileBasenameNoExtension}"
+                //"${workspaceFolder}/src/main_test"
             ],
             "options": {
                 "cwd": "${workspaceFolder}/src/"

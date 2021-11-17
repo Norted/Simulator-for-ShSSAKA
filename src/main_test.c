@@ -37,7 +37,7 @@ int main(){
 
     
     /* My PAILLIER test */
-    unsigned long long bits = 16;
+    unsigned long long bits = 127;
     int secret = 4;
     printf("\n\n---PAILLIER test---\n");
     struct paillierKeyring p_keyring = generate_keypair(bits);

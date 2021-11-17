@@ -11,7 +11,10 @@ HEADERS = 	$(wildcard ./headers/*.h)
 
 OBJS = $(SOURCES: .c=.o)
 
-all: clean main_test
+all: clean GUI main_test
+
+GUI: $(OBJS) $(HEADERS)
+	$(CC) $(CFLAGS) $(SOURCES) $(GTKINCLUDE) $(INCLUDE) GUI.c $(GTKLIB) -o $@
 
 main_test: $(OBJS) $(HEADERS)
 	$(CC) $(CFLAGS) $(SOURCES) $(GTKINCLUDE) $(INCLUDE) main_test.c $(GTKLIB) -o $@
@@ -20,5 +23,6 @@ main_test: $(OBJS) $(HEADERS)
 .PHONY: clean
 
 clean:
+	rm -f GUI
 	rm -f main_test
 	rm -rf *.o

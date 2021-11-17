@@ -58,9 +58,15 @@ struct paillierKeyring generate_keypair(int bits) {
         printf("Size of the bits value must be bigger or equal 16!\n");
         return keyring;
     }
-    unsigned long long p = generate_prime((unsigned long long) (bits / 2));
-    unsigned long long q = generate_prime((unsigned long long) (bits / 2));
-    keyring.pk.n = p * q;
+
+    keyring.pk.n = 0;
+    unsigned long long p = 0;
+    unsigned long long q = 0;
+    while (log2l(keyring.pk.n) < 8) {
+        p = generate_prime((unsigned long long) (bits / 2));
+        q = generate_prime((unsigned long long) (bits / 2));
+        keyring.pk.n = p * q;
+    }
     keyring.pk.n_sq = keyring.pk.n * keyring.pk.n;
     keyring.pk.g = keyring.pk.n + 1;
 
@@ -74,7 +80,7 @@ unsigned long long encrypt(struct paillierPublicKey pk, unsigned long long plain
     int stop = 0;
     unsigned long long r = 0;
     while (stop < 100) {
-        r = generate_prime((unsigned long long) round(log(pk.n)/log(2)));
+        r = generate_prime((unsigned long long) roundl(log2l((long double) pk.n)));
         if (r > 0 && r < pk.n)
             break;
         stop ++;
@@ -89,7 +95,7 @@ unsigned long long encrypt(struct paillierPublicKey pk, unsigned long long plain
 
 unsigned long long decrypt(struct paillierKeyring keyring, unsigned long long cipher) {
     unsigned long long x = (unsigned long long) _binpow(cipher, keyring.sk.l, keyring.pk.n_sq) - 1;
-    unsigned long long plain = ((unsigned long long) floor(x / keyring.pk.n) * keyring.sk.m) % keyring.pk.n;
+    unsigned long long plain = ((unsigned long long) floorl((long double) (x / keyring.pk.n)) * keyring.sk.m) % keyring.pk.n;
     return plain;
 }
 
