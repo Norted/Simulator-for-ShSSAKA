@@ -1,0 +1,169 @@
+GtkWindow {
+    background-color: red;
+}
+
+button.titlebutton {
+    min-height: 24px;
+    min-width: 24px;
+    padding: 0;
+}
+
+button.titlebutton.close {
+    background-color: red;
+    color: white;
+}
+
+button.titlebutton.close:hover {
+    background-color: crimson;
+    color: white;
+}
+
+button.titlebutton.maximize {
+    background-color: orange;
+    color: white;
+}
+
+button.titlebutton.maximize:hover {
+    background-color: goldenrod;
+    color: white;
+}
+
+button.titlebutton.minimize {
+    background-color: green;
+    color: white;
+}
+
+button.titlebutton.minimize:hover {
+    background-color: lime;
+    color: white;
+}
+
+GTK_BUTTONS_CLOSE {
+    background-color: black;
+    background: black;
+    border-style: solid;
+    border-color: red;
+    border-width: 2px;
+    color: red;
+    font-family: 'Courier New', Courier, monospace;
+    font-style: normal;
+    font-weight: lighter;
+    font-size: 12px;
+    border-radius: 1px;
+}
+
+#window {
+    background-color: black;
+    border-style: double;
+    border-color: red;
+    border-width: 2px;
+}
+
+#grid {
+    background-color: black;
+}
+
+#spinButton {
+    background-color: black;
+    border-style: solid;
+    border-color: red;
+    border-width: 2px;
+    color: red;
+    font-family: 'Courier New', Courier, monospace;
+    font-style: normal;
+    font-weight: lighter;
+    font-size: 13px;
+    border-radius: 1px;
+}
+
+#spinButton:focus {
+    background-color: black;
+    border-style: ridge;
+    border-color: red;
+    border-width: 2px;
+    color: red;
+    font-family: 'Courier New', Courier, monospace;
+    font-style: normal;
+    font-weight: lighter;
+    font-size: 13px;
+    border-radius: 1px;
+}
+
+#button {
+    background-color: black;
+    background: black;
+    border-style: solid;
+    border-color: red;
+    border-width: 2px;
+    color: red;
+    font-family: 'Courier New', Courier, monospace;
+    font-style: normal;
+    font-weight: lighter;
+    font-size: 12px;
+    border-radius: 1px;
+}
+
+#button:hover {
+    background-color: black;
+    background: black;
+    border-style: ridge;
+    border-color: red;
+    border-width: 2px;
+    color: red;
+    font-family: 'Courier New', Courier, monospace;
+    font-style: normal;
+    font-weight: lighter;
+    font-size: 12px;
+    border-radius: 1px;
+}
+
+#button:disabled {
+    background-color: black;
+    background: black;
+    border-style: dotted;
+    border-color: red;
+    border-width: 2px;
+    color: maroon;
+    font-family: 'Courier New', Courier, monospace;
+    font-style: normal;
+    font-weight: lighter;
+    font-size: 12px;
+    border-radius: 1px;
+}
+
+#label {
+    background-color: black;
+    color: red;
+    font-family: 'Courier New', Courier, monospace;
+    font-style: normal;
+    font-weight: bold;
+    font-size: 14px;
+    border-radius: 5px;
+}
+
+#console {
+    background-color: black;
+    color: red;
+    border-style: dotted;
+    border-color: red;
+    border-width: 2px;
+    font-family: 'Courier New', Courier, monospace;
+    font-style: normal;
+    font-weight: bold;
+    font-size: 12px;
+    border-radius: 5px;
+}
+
+#dialog {
+    background-color: black;
+    background: black;
+    color: red;
+    border-style: groove;
+    border-color: red;
+    border-width: 2px;
+    font-family: 'Courier New', Courier, monospace;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 12px;
+    border-radius: 5px;
+}

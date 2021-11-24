@@ -17,7 +17,8 @@
                 "/usr/include/harfbuzz",
                 "/usr/include/gdk-pixbuf-2.0",
                 "/usr/local/include",
-                "${workspaceFolder}/libgcrypt",
+                "/usr/local/lib",
+                "${workspaceFolder}/openssl",
                 "${workspaceFolder}/libpolynomial",
                 "${workspaceFolder}/src/headers"
             ],

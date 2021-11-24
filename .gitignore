@@ -1,10 +1,13 @@
 # libraries folder
-libgcrypt
+wolfssl
+openssl
 libpolynomial
-sss
 
 # binary files
 AKA
+paillier
+SSAKA
+paramgen
 GUI
 main_test
 

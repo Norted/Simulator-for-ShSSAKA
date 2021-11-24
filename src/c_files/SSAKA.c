@@ -1,33 +1,25 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <math.h>
-#include <limits.h>
-// extern headers
-#include <polynomial.h>
-#include <gcrypt.h>
 #include <SSAKA.h>
 
-
 // definition of global values
-const unsigned int g_q = 18;
+const unsigned int g_q = 19;
 unsigned int g_g;
-const unsigned int g_generators[6] = {4, 7, 9, 10, 13, 16};
+const unsigned int g_generators[6] = {2, 3, 10, 13, 14, 15};
 unsigned int g_idCounter = 1;
 
-const int g_generatorsLen = 5;
+const int g_generatorsLen = 6;
 const int g_maxRandomNumber = 100;
 const int g_minRandomNumber = 1;
 
-struct Keychain g_clientKeys;
-struct Keychain g_serverKeys;
-struct Keychain g_devicesKeys[G_NUMOFDEVICES];
+struct aka_Keychain g_aka_serverKeys;
+struct aka_Keychain g_aka_clientKeys;
+struct aka_Keychain g_aka_devicesKeys[G_NUMOFDEVICES];
 
+struct ssaka_Keychain g_ssaka_deviceKeys[G_NUMOFDEVICES+1];
 
 // supportive functions declarations
 unsigned int _hash(unsigned int Y, unsigned int sigma, unsigned int kappa);
-void _keyPrinter(struct Keychain keys);
-struct Keychain _initKeys();
+void _aka_keyPrinter(struct aka_Keychain key);
+struct aka_Keychain _initKeys();
 
 
 
@@ -46,21 +38,34 @@ struct Keychain _initKeys();
 */
 
 void setup() {
+    int i = 0;
     g_g = g_generators[rand() % g_generatorsLen];
 
     printf("---SERVER---\n");
-    g_serverKeys = _initKeys();
-    
-    printf("\n---CLIENT---\n");
-    g_clientKeys = _initKeys();
-    
-    printf("\n---DEVICE---\n");
-    for (int i = 0; i < G_NUMOFDEVICES; i++) {
-        printf("\n- DEVICE %d -\n", i);
-        g_devicesKeys[i] = _initKeys();
-    }
-    printf("\n");
+    g_aka_serverKeys = _initKeys();
 
+    // pre-init of SSAKA keys for client and other devices
+    for (i; i <= G_NUMOFDEVICES; i++) {
+        ssaka_KeyGeneration(&g_ssaka_deviceKeys[i]);
+    }
+    
+    for (i = 0; i <= G_NUMOFDEVICES; i++) {
+        //g_aka_devicesKeys[i] = _initKeys();
+        g_ssaka_deviceKeys[i].sk = ssaka_ShamirKeyComputation();
+        if(g_ssaka_deviceKeys[i].sk == 0)
+            i--;
+    }
+
+    printf("\n---CLIENT---\n");
+    _ssaka_keyPrinter(g_ssaka_deviceKeys[0]);
+
+    printf("\n---DEVICES---\n");
+    for (int i = 1; i <= G_NUMOFDEVICES; i++) {
+        printf("\n- DEVICE %d -\n", i);
+        _ssaka_keyPrinter(g_ssaka_deviceKeys[i]);
+    }
+
+    printf("\n");
     return;
 }
 
@@ -96,7 +101,7 @@ struct ServerSign aka_serverSignVerify (unsigned int Y, unsigned int sk_s, unsig
      *         (aka_clientProofVerify)
      *  Server  ←   (tau_c, kappa)  ←   Client
      */
-    client = aka_clientProofVerify(Y, sigma, g_serverKeys.pk, g_clientKeys.sk);
+    client = aka_clientProofVerify(Y, sigma, g_aka_serverKeys.pk, g_aka_clientKeys.sk);
 
     unsigned int t_chck = (unsigned int) pow((double) g_g, (double) client.pi[1]) * pow((double) pk_c, (double) client.pi[0]);
     server.kappa = (unsigned int) pow((double) t_chck, (double) r_s);
@@ -143,21 +148,58 @@ struct ClientProof aka_clientProofVerify (unsigned int Y, unsigned int sigma[2],
  *  /////////////////////////////////////////////////////////
  */
 
-struct Share ssaka_ClientAddShare(unsigned int sk_new[][2], unsigned int sk_c, unsigned int pk_c) {
-    struct Share share;
-
-    unsigned int poly_degree = 2;
+/*
     unsigned int poly_coefs[3] = {0, 0, 0};
-    Polynomial *poly = polynomial_new(poly_degree);
+    Polynomial *poly = polynomial_new(2); // setting poly degree
     for (int i = 0; i < poly_degree; i++) {
-        poly_coefs[0] += sk_new[i][1];
-        poly_coefs[1] += sk_new[i][0] % 2;
-        poly_coefs[2] += sk_new[i][0] - (sk_new[i][0] % 2);
+        poly_coefs[0] += rand() % g_q;  // SUM d_i_1
+        poly_coefs[1] += rand() % g_q;  // SUM d_i_2
+        poly_coefs[2] += rand() % g_q;  // SUM kappa_i
     }
     
     for (int i = 0; i <= poly_degree; i++) {
-        polynomial_set_coefficient(poly, i, poly_coefs[i]);
+        polynomial_set_coefficient(poly, i, poly_coefs[i]);     
     }
+
+    
+
+    //unsigned int c_devices = ssaka_ShamirKeyComputation(ssaka_Keychain);
+    
+*/
+
+void ssaka_KeyGeneration(struct ssaka_Keychain *ssaka_Keychain) {
+    ssaka_Keychain->ID = g_idCounter++;
+    ssaka_Keychain->pk = rand() % g_q;
+    ssaka_Keychain->d_1 = rand() % g_q;
+    ssaka_Keychain->d_2 = rand() % g_q;
+    ssaka_Keychain->kappa = rand() % g_q;
+    return;
+}
+
+unsigned long long ssaka_ShamirKeyComputation() {
+    struct paillierKeyring paiKeys = generate_keypair();
+    unsigned long long c1 = ssaka_PaillierEncryption(&g_ssaka_deviceKeys[0], paiKeys);
+    int i = 2;
+    unsigned long long c_prime = ssaka_PaillierEncryption(&g_ssaka_deviceKeys[1], paiKeys);
+    unsigned long long tmp_c = 0;
+    for (i; i < G_NUMOFDEVICES; i++) {
+        tmp_c = ssaka_PaillierEncryption(&g_ssaka_deviceKeys[i], paiKeys);
+        c_prime = mul_const(paiKeys.pk, c_prime, tmp_c);
+    }
+    return add(paiKeys.pk, decrypt(paiKeys, c_prime), c1) % g_q;
+}
+
+unsigned long long ssaka_PaillierEncryption(struct ssaka_Keychain *ssaka_Keychain, struct paillierKeyring paiKeys) {
+    unsigned long long ci_1 = encrypt(paiKeys.pk, ssaka_Keychain->d_1);
+    unsigned long long ci_2 = encrypt(paiKeys.pk, ssaka_Keychain->d_2);
+    unsigned long long c_kappa = encrypt(paiKeys.pk, ssaka_Keychain->kappa);
+    
+    unsigned long long ci_prime = add(paiKeys.pk, modpow(ci_1, (ssaka_Keychain->pk * ssaka_Keychain->pk), g_q), modpow(ci_2, ssaka_Keychain->pk, g_q));
+    return add(paiKeys.pk, ci_prime, c_kappa);
+}
+
+struct Share ssaka_ClientAddShare(unsigned int sk_new[][2], unsigned int sk_c, unsigned int pk_c) {
+    struct Share share;
 
     int size = sizeof(sk_new) / sizeof(sk_new[0]);
     for (int i = 0; i < size; i++) {
@@ -169,18 +211,21 @@ struct Share ssaka_ClientAddShare(unsigned int sk_new[][2], unsigned int sk_c, u
     return share;
 }
 
-struct Share ssaka_ClientRevShare(unsigned int sk_rev[][2], unsigned int sk_c, unsigned int pk_c) {
-    struct Share share;
-    
-    int size = sizeof(sk_rev) / sizeof(sk_rev[0]);
-    for (int i = 0; i < size; i++) {
-        // TODO
-        share.pk_c = 0;
-        share.pk_c_dash = 0;
-        share.sk_c = 0;
+/*  SSAKA REVERSE SHARE
+
+    struct Share ssaka_ClientRevShare(unsigned int sk_rev[][2], unsigned int sk_c, unsigned int pk_c) {
+        struct Share share;
+        
+        int size = sizeof(sk_rev) / sizeof(sk_rev[0]);
+        for (int i = 0; i < size; i++) {
+            // TODO
+            share.pk_c = 0;
+            share.pk_c_dash = 0;
+            share.sk_c = 0;
+        }
+        return share;
     }
-    return share;
-}
+*/
 
 struct ClientProof ssaka_ClientProofVerify(unsigned int Y, unsigned int sigma[2], unsigned int pk_s, unsigned int sk_c) {
     struct ClientProof client;
@@ -232,7 +277,7 @@ struct ClientProof ssaka_ClientProofVerify(unsigned int Y, unsigned int sigma[2]
      *  +++++++++++++++++++++
      */
     for (int i = 0; i < G_NUMOFDEVICES; i++) {
-        devices[i].s_i = (r_i[i] - client.pi[0] * g_devicesKeys[i].sk)%g_q;
+        devices[i].s_i = (r_i[i] - client.pi[0] * g_aka_devicesKeys[i].sk)%g_q;
     }
 
     /*                  ←   <device_i>
@@ -241,7 +286,7 @@ struct ClientProof ssaka_ClientProofVerify(unsigned int Y, unsigned int sigma[2]
      *  ++++ CLIENT SIDE ++++
      *  +++++++++++++++++++++
      */
-    unsigned int s_0 = (r_0 - client.pi[0] * g_clientKeys.sk)%g_q;
+    unsigned int s_0 = (r_0 - client.pi[0] * g_aka_clientKeys.sk)%g_q;
     client.pi[1] = s_0;
     for (int i = 0; i < G_NUMOFDEVICES; i++) {
         client.pi[1] += devices[i].s_i;
@@ -260,31 +305,85 @@ struct ClientProof ssaka_ClientProofVerify(unsigned int Y, unsigned int sigma[2]
  */
 
 // print to console the keychain variables
-void _keyPrinter(struct Keychain keys) {
-    printf("ID: %u\n", keys.ID);
-    printf("PK: %u\n", keys.pk);
-    printf("SK: %u\n", keys.sk);
+void _aka_keyPrinter(struct aka_Keychain key) {
+    printf("ID: %u\n", key.ID);
+    printf("PK: %u\n", key.pk);
+    printf("SK: %u\n", key.sk);
     
     return;
 }
 
+void _ssaka_keyPrinter(struct ssaka_Keychain key) {
+    printf("ID: %u\n", key.ID);
+    printf("PK: %llu\n", key.pk);
+    printf("SK: %llu\n", key.sk);
+
+    return;
+}
+
 // initialize the keychain with computed values
-struct Keychain _initKeys() {
-    struct Keychain keys;
+struct aka_Keychain _initKeys() {
+    struct aka_Keychain keys;
     keys.sk = (unsigned int) (rand() % (g_maxRandomNumber + 1 - g_minRandomNumber) + g_minRandomNumber)%g_q;
     if(keys.sk < 2)
         keys.sk += 2;
     keys.pk = (unsigned int) powl((long double) g_g, (long double) keys.sk);
     keys.ID = g_idCounter++;
     
-    _keyPrinter(keys);
+    _aka_keyPrinter(keys);
     return keys;
 }
 
-// momentally used instead of chosen hash from suite
 unsigned int _hash(unsigned int Y, unsigned int t_s, unsigned int kappa) {
-    /* gcry_md_hd_t * hd;
-    gcry_error_t error;
-    error = gcry_md_open(hd, GCRY_MD_SHA3_512, GCRY_MD_FLAG_HMAC); */
-    return (unsigned int) ((Y * pow(10, (double) log10(t_s)+1) + t_s)*pow(10, (double) log10(kappa)+1))%g_q;
+    return (unsigned int) ((Y * (pow(10, (double) log10(t_s)+1) + t_s)) * (pow(10, (double) log10(kappa)+1) + kappa))%g_q;
+}
+
+unsigned long long calculateSHA(unsigned char *hash, unsigned int Y, unsigned int t_s, unsigned int kappa) {
+    unsigned char inbuf[50];
+    sprintf(&inbuf, "%u%u%u\0", Y, t_s, kappa);
+    printf("%u %u %u\n%s\n", Y, t_s, kappa, inbuf);
+
+    unsigned char outbuf[SHA256_DIGEST_LENGTH];
+
+    SHA256(inbuf, strlen(inbuf), outbuf);
+
+    hash[40] = '\0';
+    int i;
+    for (i = 0; i < SHA_DIGEST_LENGTH; i++) {
+        sprintf(&hash[i*2], "%02x", outbuf[i]);
+    }
+    printf("SHA256 HASH: %s\n", hash);
+    unsigned long long res = hex_to_int(hash);
+    return res;
+}
+
+unsigned long long hex_to_int(unsigned char *hex) {
+    unsigned long long num = 0;
+    unsigned long long place = 1;
+    unsigned int i = 0;
+    unsigned long long val;
+
+    /* Find the length of total number of hex digit */
+    int len = strlen(hex);
+    len--;
+    
+    for(i=0; hex[i]!='\0'; i++) {
+        if(hex[i]>='0' && hex[i]<='9') {
+            val = hex[i] - 48;
+        }
+        else if(hex[i]>='a' && hex[i]<='f') {
+            val = hex[i] - 97 + 10;
+        }
+        else if(hex[i]>='A' && hex[i]<='F') {
+            val = hex[i] - 65 + 10;
+        }
+
+        num += val * pow(16, len);
+        len--;
+    }
+
+    printf("Hexadecimal number = %s\n", hex);
+    printf("Decimal number = %llu\n", num);
+
+    return num;
 }

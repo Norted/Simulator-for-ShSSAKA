@@ -22,12 +22,16 @@
                 "-I/usr/include/harfbuzz",
                 "-I/usr/include/gdk-pixbuf-2.0",
                 "-I/usr/local/include",
+                "-I/usr/local/lib",
+                "-I${workspaceFolder}/openssl",
                 "-I${workspaceFolder}/src/headers",
                 "${workspaceFolder}/src/c_files/SSAKA.c",
                 "${workspaceFolder}/src/c_files/paillier.c",
-                "${workspaceFolder}/src/c_files/primes.c",
-                //"${workspaceFolder}/src/main_test.c",
-                "${workspaceFolder}/src/GUI.c",
+                "${workspaceFolder}/src/c_files/paramgen.c",
+                "${workspaceFolder}/src/main_test.c",
+                //"${workspaceFolder}/src/GUI.c",
+                "-lssl",
+                "-lcrypto",
                 "-lgtk-3",
                 "-lgdk-3",
                 "-latk-1.0",
@@ -48,7 +52,6 @@
                 "-lm",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"
-                //"${workspaceFolder}/src/main_test"
             ],
             "options": {
                 "cwd": "${workspaceFolder}/src/"

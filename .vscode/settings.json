@@ -3,6 +3,10 @@
         "stdio.h": "c",
         "paillier.h": "c",
         "ssaka.h": "c",
-        "gtk.h": "c"
+        "gtk.h": "c",
+        "paramgen.h": "c",
+        "stdlib.h": "c",
+        "polynomial.h": "c",
+        "sha.h": "c",
     }
 }
