@@ -1,15 +1,16 @@
 # libraries folder
-wolfssl
-openssl
-libpolynomial
+wolfssl/
+openssl/
+libpolynomial/
 
 # binary files
-AKA
+GUI
+main_test
+
 paillier
 SSAKA
 paramgen
-GUI
-main_test
+openssl_bn
 
 # Prerequisites
 *.d

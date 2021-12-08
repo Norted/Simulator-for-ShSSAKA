@@ -1,104 +1,41 @@
 #ifndef __SSAKA_H__
 #define __SSAKA_H__
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-#include <math.h>
-#include <limits.h>
-#include <string.h>
 // extern headers
-#include <polynomial.h>
+#include <AKA.h>
+#include <globals.h>
 #include <paillier.h>
-#include <openssl/sha.h>
 
 // structures definition
-struct aka_Keychain {
-    unsigned int pk;
-    unsigned int sk;
-    unsigned int ID;
-};
-
-struct ServerSign {
-    unsigned int tau_s;
-    unsigned int kappa;
-};
-
-struct ClientProof {
-    unsigned int tau_c;
-    unsigned int pi[2];
-    unsigned int kappa;
-};
-
-struct DeviceProof {
-    unsigned int s_i;
-    unsigned int kappa_i;
-};
-
 struct ssaka_Keychain {
-    unsigned int ID;
-    unsigned long long pk;
-    unsigned long long sk;
-    unsigned long long d_1;
-    unsigned long long d_2;
-    unsigned long long kappa;
+    unsigned char ID[BUFFER];
+    unsigned char pk[BUFFER];
+    unsigned char sk[BUFFER];
+    unsigned char ds[G_POLYDEGREE][BUFFER];
+    unsigned char kappa[BUFFER];
 };
 
 struct Share {
-    unsigned int pk_c_dash;
-    unsigned int pk_c;
-    unsigned int sk_c;
+    unsigned char new_pk_c[BUFFER];
+    unsigned char new_sk_c[BUFFER];
 };
 
-/*  --- GLOBALS ---
- *  |-> g_q ................. order of multiplicative group Z*_q
- *  |-> g_g ................. generated generator from g_generators
- *  |-> g_generators ........ hardcoded generators of Z*_q
- *  |-> g_idCounter ......... helping couter for CID generation
- *  ------ support globals
- *      |-> g_generatorsLen ..... length of the g_generators field 
- *      |-> g_maxRandomNumber ... maximal random number
- *      |-> g_minRandomNumber ... minimal random number
- */
+extern struct aka_Keychain g_ssaka_serverKeys;
+extern struct ssaka_Keychain g_ssaka_deviceKeys[];
 
-extern const unsigned int g_q;
-extern unsigned int g_g;
-extern const unsigned int g_generators[];
-extern unsigned int g_idCounter;
-
-extern const int g_generatorsLen;
-extern const int g_maxRandomNumber;
-extern const int g_minRandomNumber;
-
-#define G_NUMOFDEVICES  5
-
-extern struct aka_Keychain g_aka_serverKeys;
-extern struct aka_Keychain g_aka_clientKeys;
-extern struct aka_Keychain g_aka_devicesKeys[];
-
-extern struct ssaka_Keychain ssaka_deviceKeys[];
-
-#define LEN(arr) ((int) (sizeof (arr) / sizeof (arr)[0]))
-
-// AKA /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+extern struct paillierKeychain g_paiKeys;
 
 // int SETUP (int kappa);
 // int CLIENT_REGISTER (int kappa);
-void setup();
-
-struct ServerSign aka_serverSignVerify (unsigned int Y, unsigned int pk_s, unsigned int sk_c);
-struct ClientProof aka_clientProofVerify (unsigned int Y, unsigned int sigma[2], unsigned int pk_s, unsigned int sk_c);
-
-// SSAKA ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void ssaka_KeyGeneration(struct ssaka_Keychain *ssaka_Keychain);
-unsigned long long ssaka_ShamirKeyComputation();
-unsigned long long ssaka_PaillierEncryption(struct ssaka_Keychain *ssaka_Keychain, struct paillierKeyring paiKeys);
-struct Share ssaka_ClientAddShare(unsigned int sk_new[][2], unsigned int sk_c, unsigned int pk_c);
-//struct Share ssaka_ClientRevShare(unsigned int sk_rev[][2], unsigned int sk_c, unsigned int pk_c);
-struct ClientProof ssaka_ClientProofVerify(unsigned int Y, unsigned int sigma[2], unsigned int pk_s, unsigned int sk_c);
-struct DeviceProof ssaka_DeviceProof(unsigned int t_s_chck, unsigned int sk_i);
-unsigned long long calculateSHA(unsigned char *hash, unsigned int Y, unsigned int t_s, unsigned int kappa);
-unsigned long long hex_to_int(unsigned char *hex);
+unsigned int ssaka_setup();
+unsigned int ssaka_KeyGeneration(struct ssaka_Keychain *ssaka_Keychain);
+unsigned int ssaka_ShamirKeyComputation(unsigned char *key, unsigned int device_ID);
+unsigned int ssaka_PaillierEncryption(struct ssaka_Keychain *ssaka_Keychain, unsigned char *ci);
+unsigned int ssaka_interpolation (unsigned char *interpolation, unsigned int device);
+unsigned int ssaka_ClientAddShare(unsigned int new_devices_list[], unsigned int list_size, unsigned char *sk_c, unsigned char *pk_c_old, struct Share *share);
+//unsigned int ssaka_ClientRevShare(unsigned int *rev_devices_list, unsigned char *sk_c, unsigned char *pk_c, struct Share *share);
+unsigned int ssaka_akaServerSignVerify(unsigned int list_of_used_devs[], unsigned int size, unsigned char * Y, unsigned char * pk_c, unsigned char * sk_s, struct ServerSign *server);
+unsigned int ssaka_ClientProofVerify(unsigned int list_of_used_devs[], unsigned int size, unsigned char *Y, unsigned char *e_s, unsigned char *s_s, unsigned char *pk_s, unsigned char *sk_c, struct ClientProof *client);
+//unsigned int ssaka_DeviceProof(unsigned char *t_s_chck, unsigned char *sk_i, struct DeviceProof *device);
 
 #endif

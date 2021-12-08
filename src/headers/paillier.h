@@ -3,35 +3,31 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <openssl_bn.h>
 
 struct paillierPrivateKey {
-    unsigned long long l;
-    unsigned long long m;
+    unsigned char l[BUFFER];
+    unsigned char m[BUFFER];
 };
 
 struct paillierPublicKey {
-    unsigned long long n;
-    unsigned long long n_sq;
-    unsigned long long g;
+    unsigned char n[BUFFER];
+    unsigned char n_sq[BUFFER];
+    unsigned char g[BUFFER];
 };
 
-struct paillierKeyring {
+struct paillierKeychain {
     struct paillierPrivateKey sk;
     struct paillierPublicKey pk;
 };
 
-
-extern const unsigned int smallprimes[];
 #define MAXITER 10000
-#define SEED    42
 
-unsigned long long invmod(unsigned long long a, unsigned long long p);
-struct paillierKeyring generate_keypair();
-unsigned long long encrypt(struct paillierPublicKey pk, unsigned long long plain);
-unsigned long long decrypt(struct paillierKeyring keyring, unsigned long long cipher);
-unsigned long long modpow(unsigned long long base, unsigned long long exp, unsigned long long mod);
-unsigned long long gcd (unsigned long long a, unsigned long long b);
-unsigned long long add(struct paillierPublicKey pk, unsigned long long a, unsigned long long b);
-unsigned long long add_const(struct paillierPublicKey pk, unsigned long long a, unsigned long long n);
-unsigned long long mul_const(struct paillierPublicKey pk, unsigned long long a, unsigned long long n);
+unsigned int generate_keypair(struct paillierKeychain *keyring);
+unsigned int encrypt(struct paillierPublicKey pk, unsigned char *plain, unsigned char *cipher);
+unsigned int decrypt(struct paillierKeychain *keyring, unsigned char *cipher, unsigned char *plain);
+unsigned int add(struct paillierPublicKey pk, unsigned char *a, unsigned char *b, unsigned char *res);
+unsigned int add_const(struct paillierPublicKey pk, unsigned char *a, unsigned char *n, unsigned char *res);
+unsigned int mul_const(struct paillierPublicKey pk, unsigned char *a, unsigned char *n, unsigned char *res);
+
 #endif

@@ -2,11 +2,15 @@
     "files.associations": {
         "stdio.h": "c",
         "paillier.h": "c",
-        "ssaka.h": "c",
+        "SSAKA.h": "c",
+        "AKA.h": "c",
         "gtk.h": "c",
         "paramgen.h": "c",
         "stdlib.h": "c",
         "polynomial.h": "c",
+        "globals.h": "c",
         "sha.h": "c",
+        "openssl_bn.h": "c",
+        "limits.h": "c"
     }
 }

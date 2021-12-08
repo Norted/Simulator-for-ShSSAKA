@@ -1,17 +1,24 @@
-#include <gtk/gtk.h>
+#include <AKA.h>
 #include <SSAKA.h>
+#include <gtk/gtk.h>
 
 struct Buttons {
   GtkWidget *button_keys;
   GtkWidget *button_params;
   GtkWidget *button_setup;
   GtkWidget *button_akaSeverSignVer;
+  GtkWidget *button_ssakaClientProofVer;
+  GtkWidget *button_addShare;
+  GtkWidget *button_revShare;
 };
 
 static void activate (GtkApplication *app, gpointer *user_data);
 /*  BUTTON FUNCTIONS  */
 static void akaSetup (GtkWidget *button, GtkWidget *spinButton);
 static void akaServerSignVerify (GtkWidget *button, GtkWidget *label);
+static void ssakaClientProofVer (GtkWidget *button, GtkWidget *label);
+static void ssakaAddShare (GtkWidget *button, GtkWidget *label);
+static void ssakaRevShare (GtkWidget *button, GtkWidget *label);
 static void openKeysDialogue (GtkWidget *button, gpointer *user_data);
 static void openParamDialogue (GtkWidget *button, gpointer *user_data);
 /*  OTHER FUNCTIONS */
@@ -21,7 +28,7 @@ void setButtons (gboolean enabled);
 void setCSS ();
 
 /*  GLOBALS */
-guint64 lg_Y = 100;
+gchar *lg_Y = "100";
 gchar *lg_consoleName = "\n - - - - - - SSAKA Console - - - - - -\n";
 struct Buttons buttons;
 
@@ -47,6 +54,7 @@ static void activate (GtkApplication *app, gpointer *user_data) {
   GtkWidget *box_message = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 2);
   GtkWidget *box_aka = gtk_box_new (GTK_ORIENTATION_VERTICAL, 2);
   GtkWidget *box_info = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 2);
+  GtkWidget *box_keys = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 2);
   GtkWidget *box_console = gtk_box_new (GTK_ORIENTATION_VERTICAL, 2);
 
   GtkWidget *label_message = gtk_label_new ("Message:");
@@ -57,6 +65,9 @@ static void activate (GtkApplication *app, gpointer *user_data) {
   buttons.button_params = gtk_button_new_with_label ("Parameters");
   buttons.button_setup = gtk_button_new_with_label ("Setup");
   buttons.button_akaSeverSignVer = gtk_button_new_with_label ("AKA Server Sign Verify");
+  buttons.button_ssakaClientProofVer = gtk_button_new_with_label ("SSAKA Client Proof Verify");
+  buttons.button_addShare = gtk_button_new_with_label ("SSAKA Add Share");
+  buttons.button_revShare = gtk_button_new_with_label ("SSAKA Rev Share");
 
   setButtons(FALSE);
   
@@ -75,8 +86,9 @@ static void activate (GtkApplication *app, gpointer *user_data) {
   gtk_grid_attach (GTK_GRID (grid), box_aka, 0, 1, 2, 1);
   gtk_box_set_homogeneous(GTK_BOX (box_console), TRUE);
   gtk_grid_attach (GTK_GRID (grid), box_console, 0, 2, 2, 1);
+  gtk_grid_attach (GTK_GRID (grid), box_info, 0, 3, 2, 1);
 
-  gtk_box_pack_start (GTK_BOX (box_aka), box_info, TRUE, TRUE, 2);
+  gtk_box_pack_start (GTK_BOX (box_aka), box_keys, TRUE, TRUE, 2);
 
   /*  MESSAGE Label and Entry Box */
   gtk_box_pack_start (GTK_BOX (box_message), label_message, TRUE, TRUE, 2);
@@ -88,10 +100,16 @@ static void activate (GtkApplication *app, gpointer *user_data) {
   
   /*  BUTTONS
    *  |------ INFO BUTTONS
-   *        |--> KEYS Button
-   *        |--> PARAMETERS Button
+   *  |     |--> KEYS Button
+   *  |     |--> PARAMETERS Button
+   *  |
+   *  |------ SSAKA KEYS BUTTONS
+   *  |     |--> ADD SHARE Button
+   *  |     |--> REV SHARE Button
+   *  |
    *  |--> SETUP Button
    *  |--> AKA SERVER SIGN VERIFY Button
+   *  |--> SSAKA CLIENT PROOF VERIFY Button
    */
   g_signal_connect (G_OBJECT (buttons.button_keys), "clicked", G_CALLBACK (openKeysDialogue), NULL);
   gtk_widget_set_name (GTK_BUTTON (buttons.button_keys), "button");
@@ -103,6 +121,16 @@ static void activate (GtkApplication *app, gpointer *user_data) {
   gtk_widget_set_sensitive (GTK_BUTTON (buttons.button_params), FALSE);
   gtk_box_pack_end (GTK_BOX (box_info), buttons.button_params, TRUE, TRUE, 2);
 
+  g_signal_connect (G_OBJECT (buttons.button_addShare), "clicked", G_CALLBACK (ssakaAddShare), GTK_LABEL (label_console));
+  gtk_widget_set_name (GTK_BUTTON (buttons.button_addShare), "button");
+  gtk_widget_set_sensitive (GTK_BUTTON (buttons.button_addShare), FALSE);
+  gtk_box_pack_end (GTK_BOX (box_keys), buttons.button_addShare, TRUE, TRUE, 2);
+
+  g_signal_connect (G_OBJECT (buttons.button_revShare), "clicked", G_CALLBACK (ssakaRevShare), GTK_LABEL (label_console));
+  gtk_widget_set_name (GTK_BUTTON (buttons.button_revShare), "button");
+  gtk_widget_set_sensitive (GTK_BUTTON (buttons.button_revShare), FALSE);
+  gtk_box_pack_end (GTK_BOX (box_keys), buttons.button_revShare, TRUE, TRUE, 2);
+
   g_signal_connect (G_OBJECT (buttons.button_setup), "clicked", G_CALLBACK (akaSetup), GTK_LABEL (label_console));
   gtk_widget_set_name (GTK_BUTTON (buttons.button_setup), "button");
   gtk_box_pack_start (GTK_BOX (box_aka), buttons.button_setup, TRUE, TRUE, 2);
@@ -110,8 +138,13 @@ static void activate (GtkApplication *app, gpointer *user_data) {
   g_signal_connect (G_OBJECT (buttons.button_akaSeverSignVer), "clicked", G_CALLBACK (akaServerSignVerify), GTK_LABEL (label_console));
   gtk_widget_set_name (GTK_BUTTON (buttons.button_akaSeverSignVer), "button");
   gtk_widget_set_sensitive (GTK_BUTTON (buttons.button_akaSeverSignVer), FALSE);
-  gtk_box_pack_end (GTK_BOX (box_aka), buttons.button_akaSeverSignVer, TRUE, TRUE, 2);
+  gtk_box_pack_start (GTK_BOX (box_aka), buttons.button_akaSeverSignVer, TRUE, TRUE, 2);
   
+  g_signal_connect (G_OBJECT (buttons.button_ssakaClientProofVer), "clicked", G_CALLBACK (ssakaClientProofVer), GTK_LABEL (label_console));
+  gtk_widget_set_name (GTK_BUTTON (buttons.button_ssakaClientProofVer), "button");
+  gtk_widget_set_sensitive (GTK_BUTTON (buttons.button_ssakaClientProofVer), FALSE);
+  gtk_box_pack_end (GTK_BOX (box_aka), buttons.button_ssakaClientProofVer, TRUE, TRUE, 2);
+
   /*  CONSOLE   */
   gtk_label_set_selectable (GTK_LABEL (label_console), TRUE);
   gtk_label_set_line_wrap_mode (GTK_LABEL (label_console), PANGO_WRAP_CHAR);
@@ -123,7 +156,7 @@ static void activate (GtkApplication *app, gpointer *user_data) {
 
 /*  BUTTON FUNCTIONS  */
 static void akaSetup (GtkWidget *button, GtkWidget *label) {
-  setup();
+  aka_setup();
   setButtons(TRUE);
 
   gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tParameters initialized!\n"));
@@ -131,25 +164,41 @@ static void akaSetup (GtkWidget *button, GtkWidget *label) {
 }
 
 static void akaServerSignVerify (GtkWidget *button, GtkWidget *label) {
-  struct ServerSign server = aka_serverSignVerify(lg_Y, g_aka_serverKeys.sk, g_aka_clientKeys.pk);
-  if (server.tau_s == 0) {
+  struct ServerSign server = {{""}};
+  aka_serverSignVerify(lg_Y, &g_aka_clientKeys.pk, &g_aka_serverKeys.sk, &server);
+  if (strcmp(server.tau_s, "0") == 0) {
     // g_strconcat (gtk_label_get_text (console), g_strdup_printf (str));
-    gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tTAU_S = %d\n\tVerification failed! :(\n\tProtocol ends.\n", server.tau_s));
+    gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tTAU_S = %s\n\tVerification failed! :(\n\tProtocol ends.\n", server.tau_s));
     updateLabel (GTK_LABEL (label), dmp);
   }
   else {
-    gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tTAU_S = %d\n\tVerification proceeded! :)\n\tProtocol continues.\n", server.tau_s));
+    gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tTAU_S = %s\n\tVerification proceeded! :)\n\tProtocol continues.\n", server.tau_s));
     updateLabel (GTK_LABEL (label), dmp);
   }
+}
+
+static void ssakaClientProofVer (GtkWidget *button, GtkWidget *label) {
+  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tSSAKA-ClientProofVerify..."));
+  updateLabel (GTK_LABEL (label), dmp);
+}
+
+static void ssakaAddShare (GtkWidget *button, GtkWidget *label) {
+  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tSSAKA-AddShare..."));
+  updateLabel (GTK_LABEL (label), dmp);
+}
+
+static void ssakaRevShare (GtkWidget *button, GtkWidget *label) {
+  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tSSAKA-RevShare..."));
+  updateLabel (GTK_LABEL (label), dmp);
 }
 
 static void openKeysDialogue (GtkWidget *button, gpointer *user_data) {
   GtkWidget *dialog = gtk_message_dialog_new (NULL, GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, GTK_BUTTONS_NONE, "Generated keys");
 
-  gchar *message = g_strdup_printf (" --- Server --- \nID:\t%u\nPK:\t%u\nSK:\t%u\n\n --- Client --- \nID:\t%u\nPK:\t%u\nSK:\t%u\n\n==================\n\n",
+  gchar *message = g_strdup_printf (" --- Server --- \nID:\t%s\nPK:\t%s\nSK:\t%s\n\n --- Client --- \nID:\t%s\nPK:\t%s\nSK:\t%s\n\n==================\n\n",
     g_aka_serverKeys.ID, g_aka_serverKeys.pk, g_aka_serverKeys.sk, g_aka_clientKeys.ID, g_aka_clientKeys.pk, g_aka_clientKeys.sk);
   for (int i = 0; i < G_NUMOFDEVICES; i++) {
-    message = g_strconcat (message, g_strdup_printf ("--- Device %d ---\nID:\t%u\nPK:\t%u\nSK:\t%u\n\n",
+    message = g_strconcat (message, g_strdup_printf ("--- Device %d ---\nID:\t%s\nPK:\t%s\nSK:\t%s\n\n",
       i+1, g_aka_devicesKeys[i].ID, g_aka_devicesKeys[i].pk, g_aka_devicesKeys[i].sk));
   }
   message = g_strconcat (message, g_strdup_printf ("\nEscape by pressing ESC ..."));
@@ -165,11 +214,8 @@ static void openKeysDialogue (GtkWidget *button, gpointer *user_data) {
 static void openParamDialogue (GtkWidget *button, gpointer *user_data) {
   GtkWidget *dialog = gtk_message_dialog_new (NULL, GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_INFO, GTK_BUTTONS_NONE, "Parameters");
 
-  gchar *message = g_strdup_printf ("Z*_%u:\n[", g_q);
-  for (int i = 0; i <= g_generatorsLen; i++) {
-    message = g_strconcat (message, g_strdup_printf (" %d ", g_generators[i]));
-  }
-  message = g_strconcat (message, g_strdup_printf ("]\n\n==================\n\nY:\t%lu\n\nQ:\t%u\n\nG:\t%u\n\n\nEscape by pressing ESC ...", lg_Y, g_q, g_g));
+  gchar *message = g_strdup_printf ("Z*_%s:\n[", g_globals.g_q);
+  message = g_strconcat (message, g_strdup_printf ("]\n\n==================\n\nY:\t%s\n\nQ:\t%s\n\nG:\t%s\n\n\nEscape by pressing ESC ...", lg_Y, g_globals.g_q, g_globals.g_g));
 
   gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dialog), g_locale_to_utf8 (message, -1, NULL, NULL, NULL));
   gtk_widget_set_name (GTK_DIALOG (dialog), "dialog");
@@ -181,8 +227,9 @@ static void openParamDialogue (GtkWidget *button, gpointer *user_data) {
 
 /*  OTHER FUNCTIONS */
 static void updateSpinButton (GtkWidget *spinButton, GtkWidget *label) {
-  lg_Y = (guint64) gtk_spin_button_get_value_as_int (GTK_SPIN_BUTTON (spinButton));
-  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tMessage value changed to %lu!\n", lg_Y));
+  guint64 int_lg_Y = (guint64) gtk_spin_button_get_value_as_int (GTK_SPIN_BUTTON (spinButton));
+  sprintf(lg_Y, "%lu", int_lg_Y);
+  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tMessage value changed to %s!\n", lg_Y));
   updateLabel (GTK_LABEL (label), dmp);
 }
 
@@ -195,6 +242,9 @@ void setButtons (gboolean enabled) {
   gtk_widget_set_sensitive (GTK_BUTTON (buttons.button_akaSeverSignVer), enabled);
   gtk_widget_set_sensitive (GTK_BUTTON (buttons.button_keys), enabled);
   gtk_widget_set_sensitive (GTK_BUTTON (buttons.button_params), enabled);
+  gtk_widget_set_sensitive (GTK_BUTTON (buttons.button_ssakaClientProofVer), enabled);
+  gtk_widget_set_sensitive (GTK_BUTTON (buttons.button_addShare), enabled);
+  gtk_widget_set_sensitive (GTK_BUTTON (buttons.button_revShare), enabled);
 }
 
 void setCSS () {
