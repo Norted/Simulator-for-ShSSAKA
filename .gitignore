@@ -7,10 +7,13 @@ libpolynomial/
 GUI
 main_test
 
+# binary files made by miss-click xD
 paillier
 SSAKA
+AKA
 paramgen
 openssl_bn
+schnorrs_signature
 
 # Prerequisites
 *.d

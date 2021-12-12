@@ -1,9 +1,7 @@
 #ifndef __PAILLIER_H__
 #define __PAILLIER_H__
 
-#include <stdio.h>
-#include <math.h>
-#include <openssl_bn.h>
+#include <globals.h>
 
 struct paillierPrivateKey {
     unsigned char l[BUFFER];
@@ -29,5 +27,6 @@ unsigned int decrypt(struct paillierKeychain *keyring, unsigned char *cipher, un
 unsigned int add(struct paillierPublicKey pk, unsigned char *a, unsigned char *b, unsigned char *res);
 unsigned int add_const(struct paillierPublicKey pk, unsigned char *a, unsigned char *n, unsigned char *res);
 unsigned int mul_const(struct paillierPublicKey pk, unsigned char *a, unsigned char *n, unsigned char *res);
+unsigned int test_homomorphic();
 
 #endif

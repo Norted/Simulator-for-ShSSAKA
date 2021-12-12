@@ -16,7 +16,7 @@ unsigned int generate_keypair(struct paillierKeychain *keyring) {
     err += bn_mul(p, q, keyring->pk.n);
     
     err += bn_exp(keyring->pk.n, "2", keyring->pk.n_sq);
-    random_str_num_in_range(keyring->pk.g, keyring->pk.n_sq, 1);
+    random_str_num_in_range(keyring->pk.g, atoi(keyring->pk.n_sq), 1);
 
     err += bn_lcm(p, q, keyring->sk.l);
     unsigned char p_1[BUFFER];
@@ -111,4 +111,48 @@ unsigned int mul_const(struct paillierPublicKey pk, unsigned char *a, unsigned c
     //Multiplies an encrypted unsigned long longeger by a constant
     unsigned int err = bn_modexp(a, n, pk.n_sq, res);
     return err;
+}
+
+unsigned int test_homomorphic() {
+    struct paillierKeychain paikeys = {{""}};
+    unsigned int err = 0;
+    err += generate_keypair(&paikeys);
+
+    unsigned char *message_1 = "100";
+    unsigned char *message_2 = "50";
+    unsigned char message_sum[BUFFER];
+    err += bn_add(message_1, message_2, message_sum);
+    unsigned char message_mul[BUFFER];
+    err += bn_mul(message_1, message_2, message_mul);
+
+    printf("MESSAGE 1: %s\nMESSAGE 2: %s\n", message_1, message_2);
+    printf("MESSAGE SUM: %s\nMESSAGE MUL: %s\n\n", message_sum, message_mul);
+
+    unsigned char cipher_1[BUFFER];
+    err += encrypt(paikeys.pk, message_1, cipher_1);
+    unsigned char cipher_2[BUFFER];
+    err += encrypt(paikeys.pk, message_2, cipher_2);
+
+    unsigned char cipher_sum_1[BUFFER];
+    unsigned char dec_cipher_sum_1[BUFFER];
+    err += add(paikeys.pk, cipher_1, cipher_2, cipher_sum_1);
+    err += decrypt(&paikeys, cipher_sum_1, dec_cipher_sum_1);
+
+    unsigned char cipher_sum_2[BUFFER];
+    unsigned char dec_cipher_sum_2[BUFFER];
+    err += add_const(paikeys.pk, cipher_1, message_2, cipher_sum_2);
+    err += decrypt(&paikeys, cipher_sum_2, dec_cipher_sum_2);
+
+    printf("CIPHER SUM 1: %s\nCIPHER SUM 2: %s\n", dec_cipher_sum_1, dec_cipher_sum_2);
+
+    unsigned char cipher_mul[BUFFER];
+    unsigned char dec_cipher_mul[BUFFER];
+    err += mul_const(paikeys.pk, cipher_1, message_2, cipher_mul);
+    err += decrypt(&paikeys, cipher_mul, dec_cipher_mul);
+
+    printf("CIPHER MUL: %s\n", dec_cipher_mul);
+
+    if(err != 11)
+        return 0;
+    return 1;
 }

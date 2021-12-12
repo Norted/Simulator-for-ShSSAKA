@@ -141,6 +141,15 @@ GTK_BUTTONS_CLOSE {
     border-radius: 5px;
 }
 
+#text {
+    background-color: black;
+    color: red;
+    font-family: 'Courier New', Courier, monospace;
+    font-style: normal;
+    font-size: 14px;
+    border-radius: 5px;
+}
+
 #console {
     background-color: black;
     color: red;
@@ -166,4 +175,30 @@ GTK_BUTTONS_CLOSE {
     font-weight: normal;
     font-size: 12px;
     border-radius: 5px;
+}
+
+#entry {
+    background-color: black;
+    border-style: solid;
+    border-color: red;
+    border-width: 2px;
+    color: red;
+    font-family: 'Courier New', Courier, monospace;
+    font-style: normal;
+    font-weight: lighter;
+    font-size: 13px;
+    border-radius: 1px;
+}
+
+#entry:focus {
+    background-color: black;
+    border-style: ridge;
+    border-color: red;
+    border-width: 2px;
+    color: red;
+    font-family: 'Courier New', Courier, monospace;
+    font-style: normal;
+    font-weight: lighter;
+    font-size: 13px;
+    border-radius: 1px;
 }

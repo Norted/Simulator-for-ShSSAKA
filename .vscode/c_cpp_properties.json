@@ -19,7 +19,6 @@
                 "/usr/local/include",
                 "/usr/local/lib",
                 "${workspaceFolder}/openssl",
-                "${workspaceFolder}/libpolynomial",
                 "${workspaceFolder}/src/headers"
             ],
             "defines": [],
