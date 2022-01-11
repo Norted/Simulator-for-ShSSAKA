@@ -198,45 +198,63 @@ static void akaSetup (GtkWidget *button, GtkWidget *label) {
   ssaka_setup();
   setButtons(TRUE);
 
-  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tParameters initialized!\n"));
+  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\tParameters initialized!\n"));
   updateLabel (GTK_LABEL (label), dmp);
 }
 
 static void akaServerSignVerify (GtkWidget *button, GtkWidget *label) {
   struct ServerSign server = {{""}};
+  gchar *dmp;
+
+  if (size_used == 0)  {
+    dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\tDefine used devices first!", server.tau_s));
+    updateLabel (GTK_LABEL (label), dmp);
+    return;
+  }
+
   ssaka_akaServerSignVerify(&used_devs, size_used, lg_Y, &server);
   if (strcmp(server.tau_s, "0") == 0) {
     // g_strconcat (gtk_label_get_text (console), g_strdup_printf (str));
-    gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tTAU_S = %s\n\tVerification failed! :(\n\tProtocol ends.\n", server.tau_s));
-    updateLabel (GTK_LABEL (label), dmp);
+    dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\tTAU_S = %s\n\tVerification failed! :(\n", server.tau_s));
   }
   else {
-    gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tTAU_S = %s\n\tVerification proceeded! :)\n\tProtocol continues.\n", server.tau_s));
-    updateLabel (GTK_LABEL (label), dmp);
+    dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\tTAU_S = %s\n\tVerification proceeded! :)\n", server.tau_s));
   }
+  updateLabel (GTK_LABEL (label), dmp);
 }
 
 static void ssakaAddShare (GtkWidget *button, GtkWidget *label) {
   uint err = ssaka_ClientAddShare(add_number);
-
+  gchar *dmp;
   if(err == 1) {
-    gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\t%lu devices added!", add_number));
-    updateLabel (GTK_LABEL (label), dmp);
+    dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\t%lu devices added!", add_number));
+  }
+  else if(err == 2) {
+    dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\tOnly %d places left!", G_NUMOFDEVICES - currentNumberOfDevices));
   }
   else {
-    gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tERROR! No devices added!"));
-    updateLabel (GTK_LABEL (label), dmp);
+    dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\tERROR! No devices added!"));
   }
+  updateLabel (GTK_LABEL (label), dmp);
 }
 
 static void ssakaRevShare (GtkWidget *button, GtkWidget *label) {
   uint err = ssaka_ClientRevShare(revoke_devs, size_revoke);
+  gchar *dmp;
   if(err == 1) {
-    gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\t%lu devices removed!", size_revoke));
+    dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\t%lu devices removed!", size_revoke));
+    updateLabel (GTK_LABEL (label), dmp);
+  }
+  else if (err == 2) {
+    dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\tMust remain at least %d devices!", G_POLYDEGREE+1));
+    updateLabel (GTK_LABEL (label), dmp);
+  }
+  else if (err == 3) {
+    dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\tCannot remove client (0 index)!"));
     updateLabel (GTK_LABEL (label), dmp);
   }
   else {
-    gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tERROR! No devices removed!"));
+    dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\tERROR! No devices removed!"));
     updateLabel (GTK_LABEL (label), dmp);
   }
 }
@@ -303,13 +321,13 @@ static void openParamDialogue (GtkWidget *button, gpointer *user_data) {
 static void updateSpinButton_message (GtkWidget *spinButton, GtkWidget *label) {
   guint64 int_lg_Y = (guint64) gtk_spin_button_get_value_as_int (GTK_SPIN_BUTTON (spinButton));
   sprintf(lg_Y, "%lu", int_lg_Y);
-  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tMessage value changed to %s!\n", lg_Y));
+  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\tMessage value changed to %s!\n", lg_Y));
   updateLabel (GTK_LABEL (label), dmp);
 }
 
 static void updateSpinButton_add (GtkWidget *spinButton, GtkWidget *label) {
   add_number = (guint64) gtk_spin_button_get_value_as_int (GTK_SPIN_BUTTON (spinButton));
-  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tAdd value changed to %lu!\n", add_number));
+  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\tAdd value changed to %lu!\n", add_number));
   updateLabel (GTK_LABEL (label), dmp);
 }
 
@@ -327,7 +345,7 @@ void updateEntry_add(GtkWidget *entry, GtkWidget *label) {
     }
   }
   size_used = counter;
-  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tNumber of used devices is %d!\n", counter));
+  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\tNumber of used devices is %d!\n", counter));
   updateLabel (GTK_LABEL (label), dmp);
 
   printf("ADD: [");
@@ -346,7 +364,7 @@ void updateEntry_revoke(GtkWidget *entry, GtkWidget *label) {
     }
   }
   size_revoke = counter;
-  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20\x20>\tNumber of revoked devices is %d!\n", counter));
+  gchar *dmp = g_strconcat (lg_consoleName, g_strdup_printf ("\n\x20>\tNumber of revoked devices is %d!\n", counter));
   updateLabel (GTK_LABEL (label), dmp);
 
   printf("REVOKE: [");

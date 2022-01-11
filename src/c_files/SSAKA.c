@@ -71,7 +71,7 @@ unsigned int ssaka_ClientAddShare(unsigned int num_of_new_devices) {
     unsigned int err = 0;
     if(currentNumberOfDevices + num_of_new_devices > G_NUMOFDEVICES) {
         printf("Only %d places left!\n", G_NUMOFDEVICES-currentNumberOfDevices);
-        return 0;
+        return 2;
     }
 
     for (int i = 0; i < num_of_new_devices; i++) {
@@ -93,13 +93,13 @@ unsigned int ssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int 
     unsigned int err = 0;
     if(currentNumberOfDevices - list_size < (G_POLYDEGREE+1)) {
         printf("Must remain at least %d devices!\n", G_POLYDEGREE+1);
-        return 0;
+        return 2;
     }
 
     for (i; i < list_size; i++) {
         if(rev_devices_list[i] == 0) {
-            printf("Cannot remove client (in 0 place)!\n");
-            continue;
+            printf("Cannot remove client (0)!\n");
+            return 3;
         }
         free(g_ssaka_devicesKeys[rev_devices_list[i]].keys);
         g_ssaka_devicesKeys[rev_devices_list[i]].keys = NULL;
