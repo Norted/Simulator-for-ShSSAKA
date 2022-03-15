@@ -7,7 +7,7 @@
 struct aka_Keychain g_ssaka_serverKeys;
 struct ssaka_Keychain g_ssaka_devicesKeys[G_NUMOFDEVICES];
 
-struct paillierKeychain g_paiKeys = {{""}};
+struct paillier_Keychain g_paiKeys = {{""}};
 unsigned int currentNumberOfDevices = 4;
 unsigned char pk_c[BUFFER];
 
@@ -60,8 +60,8 @@ unsigned int ssaka_setup() {
 }
 
 unsigned int ssaka_KeyGeneration(struct ssaka_Keychain *keys) {
-    keys->keys = malloc(sizeof(struct SchnorrKeychain));
-    unsigned int err = random_str_num_in_range(keys->keys->pk, atoi(g_paiKeys.pk.n)-1, 1);
+    keys->keys = malloc(sizeof(struct schnorr_Keychain));
+    unsigned int err = random_str_num_in_range(keys->keys->pk, atoi(g_paiKeys.pk->n)-1, 1);
     sprintf(keys->ID, "%u", g_globals.idCounter++);
 
     return err;
@@ -137,11 +137,11 @@ unsigned int ssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int 
     return 1;
 }
 
-unsigned int ssaka_akaServerSignVerify(unsigned int list_of_used_devs[], unsigned int size, unsigned char * Y, struct ServerSign *server) {
+unsigned int ssaka_akaServerSignVerify(unsigned int list_of_used_devs[], unsigned int size, BIGNUM *Y, struct ServerSign *server) {
     unsigned int err = 0;
     struct ClientProof client ={{""}};
-    client.signature = malloc(sizeof(struct SchnorrSignature));
-    struct SchnorrSignature signature = {{""}};
+    client.signature = malloc(sizeof(struct schnorr_Signature));
+    struct schnorr_Signature signature = {{""}};
 
     if (strncmp(Y, "0", sizeof(Y)) == 0 || strncmp(g_ssaka_serverKeys.keys->sk, "0", sizeof(g_ssaka_serverKeys.keys->sk)) == 0 || strncmp(g_ssaka_devicesKeys[0].keys->pk, "0", sizeof(g_ssaka_devicesKeys[0].keys->pk)) == 0) {
         strcpy(server->tau_s, "0");
@@ -227,7 +227,7 @@ unsigned int ssaka_akaServerSignVerify(unsigned int list_of_used_devs[], unsigne
 }
 
 
-unsigned int ssaka_clientProofVerify(unsigned int list_of_used_devs[], unsigned int size, unsigned char *Y, struct SchnorrSignature *server_signature, struct ClientProof *client) {
+unsigned int ssaka_clientProofVerify(unsigned int list_of_used_devs[], unsigned int size, BIGNUM *Y, struct schnorr_Signature *server_signature, struct ClientProof *client) {
     unsigned int err = 0;
     unsigned char ver[BUFFER];
     sprintf(ver, "%d", schnorr_verify(g_globals.params, g_ssaka_serverKeys.keys->pk, Y, "0", server_signature));

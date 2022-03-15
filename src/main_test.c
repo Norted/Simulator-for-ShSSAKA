@@ -3,31 +3,26 @@
 #include <math.h>
 #include <string.h>
 // local headers
-//#include <paramgen.h>
-#include <schnorrs_signature.h>
-#include <paillier.h>
-#include <paishamir.h>
-#include <SSAKA.h>
-#include <AKA.h>
-
+#include <globals.h>
 
 struct globals g_globals;
-unsigned int test(struct aka_Keychain *server_keys, unsigned char *r_s, unsigned char *Y);
-unsigned int test_2(unsigned char *Y);
+// unsigned int test(struct aka_Keychain *server_keys, unsigned char *r_s, unsigned char *Y);
+// unsigned int test_2(unsigned char *Y);
 
-int main() {
+int main()
+{
     unsigned char *Y = "100";
     struct ServerSign server = {{""}};
     unsigned int err = 0;
 
-    //err = test_2(Y);
-    
-    /*  AKA-SETUP and AKA-CLIENT-REGISTER   
+    // err = test_2(Y);
+
+    /*  AKA-SETUP and AKA-CLIENT-REGISTER
      *      1) randomly initialize generator from GENERATORS
      *      2) generate keys for devices, client and server side
      */
 
-    /*  AKA test    
+    /*  AKA test
         g_globals.params = malloc(sizeof(struct SchnorrParams));
         gen_schnorr_params(g_globals.params);
         g_globals.idCounter = 1;
@@ -37,13 +32,13 @@ int main() {
         printf("ERR:\t%d\nTAU:\t%s\n", err, server.tau_s);
     */
 
-    /*  SSAKA test  
+    /*  SSAKA test
         g_globals.params = malloc(sizeof(struct SchnorrParams));
         gen_schnorr_params(g_globals.params);
         g_globals.idCounter = 1;
-        
+
         err += ssaka_setup();
-        
+
         unsigned int list_of_all_devs[currentNumberOfDevices-1];
         for (int i = 1; i < currentNumberOfDevices; i++) {
             list_of_all_devs[i-1] = i;  //(unsigned int) atoi(g_ssaka_devicesKeys[i].ID);
@@ -52,7 +47,7 @@ int main() {
 
         unsigned int list_of_used_devs[] = {1, 2};
         unsigned int size_used = sizeof(list_of_used_devs)/sizeof(unsigned int);
-        
+
         /*
             err += ssaka_ClientAddShare(3);
             printf("\n+++ ADDED! +++\n");
@@ -73,14 +68,14 @@ int main() {
         /
 
         err += ssaka_akaServerSignVerify(&list_of_used_devs, size_used, Y, &server);
-        //err += ssaka_akaServerSignVerify(&list_of_all_devs, size_all, Y, &server); 
+        //err += ssaka_akaServerSignVerify(&list_of_all_devs, size_all, Y, &server);
         printf("ERR:\t%d\nTAU:\t%s\n", err, server.tau_s);
     */
-    
-    /*  Paillier-Shamir test    
+
+    /*  Paillier-Shamir test
         struct paillierKeychain paikeys;
         err += generate_keypair(&paikeys);
-        
+
         g_globals.params = malloc(sizeof(struct SchnorrParams));
         gen_schnorr_params(g_globals.params);
         g_globals.idCounter = 1;
@@ -112,12 +107,12 @@ int main() {
         unsigned int size_used = sizeof(list_of_used_devs)/sizeof(unsigned int);
         err += paiShamir_interpolation(list_of_used_devs, size_used, secret_chck);
         //err += paiShamir_interpolation(list_of_all_devs, size_all, secret_chck);
-       
+
         printf("\nCHCK: %s\n", secret_chck);
         printf("\nMAIN-ERR: %d\n", err);
     */
 
-    /*   SCHNORR test  
+    /*   SCHNORR test
         int stop = 0;
         struct SchnorrParams params = {{""}};
         struct SchnorrKeychain keys_s = {{""}};
@@ -129,8 +124,8 @@ int main() {
         strcpy(kappa_s, "1");
         unsigned char kappa_c[BUFFER];
         strcpy(kappa_c, "1");
-        
-        
+
+
         err += gen_schnorr_params(&params);
         printf("--- PARAMETERS ---\nERR: %u\nG: %s\tP: %s\tQ: %s\n", err, params.g, params.p, params.q);
         err += gen_schnorr_keys(&keys_s);
@@ -150,13 +145,13 @@ int main() {
             strcpy(hash_prime, sign_s.hash);
             printf("\n--- SIGNATURE SERVER ---\nERR: %u\nSIGNATURE: %s\nHASH: %s\n", err, sign_s.signature, sign_s.hash);
             err += schnorr_verify(&params, &keys_s.pk, Y, "0", &sign_s);
-            
+
             if(err == 2)
                 printf("\nVERIFICATION PROCEEDED! :)\t(ERR: %u)\n", err);
             else {
                 printf("\nVERIFICATION FAILED! :(\t(ERR: %u)\n", err);
             }
-            
+
             strcpy(sign_c.c_prime, sign_s.c_prime);
             err += schnorr_sign(&params, &keys_c.sk, Y, kappa_c, &sign_c);
             printf("\n--- SIGNATURE CLIENT ---\nERR: %u\nSIGNATURE: %s\nHASH: %s\nKAPPA_C: %s\n", err, sign_c.signature, sign_c.hash, kappa_c);
@@ -176,14 +171,14 @@ int main() {
         }
     */
 
-    /*  My PAILLIER test    
+    /*  My PAILLIER test
         printf("\n\n---PAILLIER test---\n");
         struct paillierKeychain p_keyring = {{""}};
         err += generate_keypair(&p_keyring);
 
         printf("ERR: %u\nKEYS:\n|--> L: %s\n|--> M: %s\n|--> N: %s\n|--> N_SQ: %s\n|--> G: %s\n", err, p_keyring.sk.l,
             p_keyring.sk.m, p_keyring.pk.n, p_keyring.pk.n_sq, p_keyring.pk.g);
-        
+
         unsigned char *secret = "125";
         printf("SECRET: %s\n", secret);
         unsigned char enc[BUFFER];
@@ -199,7 +194,7 @@ int main() {
         printf("\n\nERR: %u (?= 4)\n", err);
     */
 
-    /*  test of HASH    
+    /*  test of HASH
         unsigned char res[BUFFER];
         unsigned char t_s[BUFFER];
         for (int i = 1; i <= 20; i++) {
@@ -208,8 +203,8 @@ int main() {
             printf("I: %d\tHASH: %s\n", i, res);
         }
     */
-    
-    /*  test BN_LIB 
+
+    /*  test BN_LIB
         unsigned char *a = "21";
         unsigned char *b = "42";
         unsigned char *mod = "9";
@@ -241,12 +236,12 @@ int main() {
         printf("GCD: %s, %u\n", res, err);
     */
 
-    //free_aka_mem();
-    //free_ssaka_mem();
-    //free_schnorr_mem();
+    // free_aka_mem();
+    // free_ssaka_mem();
+    // free_schnorr_mem();
 
-    /*  ultimately desperate test of tests v1    
-        
+    /*  ultimately desperate test of tests v1
+
         unsigned char g[BUFFER];
         unsigned char p[BUFFER];
         unsigned char q[BUFFER];
@@ -264,7 +259,7 @@ int main() {
             for(int j = 1; j <= 19; j++) {
                 struct aka_Keychain server_keys = {{""}};
                 int u = sprintf(server_keys.sk, "%d", j);
-            
+
                 err += bn_exp(g_globals.g_g, server_keys.sk, server_keys.pk);
                 sprintf(server_keys.ID, "%u", g_globals.g_idCounter++);
                 printf("SK: %s\n", server_keys.sk);
@@ -322,18 +317,18 @@ int main() {
             t_s_chck[i] = '0';
         }
 
-        
-        err += bn_modexp(g_globals.g_g, r_s, g_globals.g_q, t_s);  //t_s 
+
+        err += bn_modexp(g_globals.g_g, r_s, g_globals.g_q, t_s);  //t_s
         err += hash(e_s, Y, t_s, zero);
         err += bn_mul(e_s, server_keys->sk, mul);
         err += bn_sub(r_s, mul, sub);
         err += bn_mod(sub, g_globals.g_q, s_s);
-        
-        
+
+
         err += bn_modexp(g_globals.g_g, s_s, g_globals.g_q, t_s_chck_1);
         err += bn_modexp(server_keys->pk, e_s, g_globals.g_q, t_s_chck_2);
         err += bn_modmul(t_s_chck_1, t_s_chck_2, g_globals.g_q, t_s_chck);
-        
+
         unsigned char test[BUFFER];
         unsigned char *one = "1";
         err += bn_sub(t_s_chck, one, test);
@@ -349,7 +344,7 @@ int main() {
         }
 
         //printf("T_S: %s\t\tT_S_CHCK: %s\n", t_s, t_s_chck);
-        
+
         return set;
     }
 */
@@ -388,7 +383,7 @@ unsigned int test_2(unsigned char *Y) {
         }
     }
     //printf("\n");
-    
+
     // SHARE
     err += paiShamir_get_ci(&paikeys, kappa_inter[0], d[0], keys_client.pk, c);
     err += paiShamir_get_ci(&paikeys, kappa_inter[1], d[1], keys_client.pk, cN_prime);
@@ -427,7 +422,7 @@ unsigned int test_2(unsigned char *Y) {
     unsigned char pk_ch[BUFFER];
     err += bn_modexp(params.g, sk_sum, params.p, pk_ch);
     printf("PK: %s\nPK_CH: %s\n\n\n", pk, pk_ch);
-    
+
     unsigned char r_s[BUFFER];
     err += random_str_num_in_range(r_s, atoi(params.q)-1, 1);
     unsigned char t_s[BUFFER];
@@ -455,7 +450,7 @@ unsigned int test_2(unsigned char *Y) {
 
     unsigned char r_c[BUFFER];
     err += random_str_num_in_range(r_c, atoi(params.q)-1, 1);
-    
+
     unsigned char r_i[2][BUFFER];
     unsigned char t_i[2][BUFFER];
     unsigned char kappa_i[2][BUFFER];
@@ -464,7 +459,7 @@ unsigned int test_2(unsigned char *Y) {
         err += bn_modexp(params.g, r_i[i], params.p, t_i[i]);
         err += bn_modexp(t_s_ch, r_i[i], params.p, kappa_i[i]);
     }
-    
+
     unsigned char t_c[BUFFER];
     err += bn_modexp(params.g, r_c, params.p, t_c);
     unsigned char kappa_c[BUFFER];
@@ -558,7 +553,7 @@ unsigned int test_2(unsigned char *Y) {
  *  https://math.stackexchange.com/questions/814879/find-a-generator-of-the-multiplicative-group-of-mathbbz-23-mathbbz-as-a-c
  *  https://stackoverflow.com/questions/23360728/how-to-generate-a-number-of-n-bit-in-length
  *  https://stackoverflow.com/questions/2844/how-do-you-format-an-unsigned-long-long-int-using-printf
- *  
+ *
  *  ~~~ WOLFSSL ~~~
  *  https://www.wolfssl.com/
  */

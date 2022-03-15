@@ -3,30 +3,30 @@
 
 #include <globals.h>
 
-struct SchnorrParams {
-    unsigned char p[BUFFER];
-    unsigned char q[BUFFER];
-    unsigned char g[BUFFER];
+struct schnorr_Params {
+    BIGNUM *p;
+    BIGNUM *q;
+    BIGNUM *g;
 };
 
-struct SchnorrSignature {
-    unsigned char hash[BUFFER];
-    unsigned char signature[BUFFER];
-    unsigned char r[BUFFER];
-    unsigned char c_prime[BUFFER];
+struct schnorr_Signature {
+    BIGNUM *hash;
+    BIGNUM *signature;
+    BIGNUM *r;
+    BIGNUM *c_prime;
 };
 
-struct SchnorrKeychain {
-    unsigned char pk[BUFFER];
-    unsigned char sk[BUFFER];
+struct schnorr_Keychain {
+    BIGNUM *pk;
+    BIGNUM *sk;
 };
 
 extern DSA *dsa;
 
-unsigned int gen_schnorr_params(struct SchnorrParams *params);
-unsigned int gen_schnorr_keys(struct SchnorrKeychain *keys);
-unsigned int schnorr_sign(struct SchnorrParams *params, unsigned char *sk, unsigned char *message, unsigned char *kappa, struct SchnorrSignature *signature);
-unsigned int schnorr_verify(struct SchnorrParams *params, unsigned char *pk, unsigned char *message, unsigned char *kappa, struct SchnorrSignature *signature);
+unsigned int gen_schnorr_params(struct schnorr_Params *params);
+unsigned int gen_schnorr_keys(struct schnorr_Keychain *keys);
+unsigned int schnorr_sign(struct schnorr_Params *params, BIGNUM *sk, BIGNUM *message, BIGNUM *kappa, struct schnorr_Signature *signature);
+unsigned int schnorr_verify(struct schnorr_Params *params, BIGNUM *pk, BIGNUM *message, BIGNUM *kappa, struct schnorr_Signature *signature);
 void free_schnorr_mem();
 
 #endif
