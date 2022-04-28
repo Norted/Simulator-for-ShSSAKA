@@ -1,14 +1,15 @@
 # libraries folder
-wolfssl/
 openssl/
-libpolynomial/
 
 # binary files
 GUI
 main_test
 
 # binary files made by miss-click xD
-paillier
+paillier_scheme
+paishamir
+speed_functions
+support_functions
 SSAKA
 AKA
 paramgen

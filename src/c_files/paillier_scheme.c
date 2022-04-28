@@ -1,24 +1,25 @@
-#include <paillier_scheme3.h>
+#include <paillier_scheme.h>
+
 unsigned int paillier_generate_keypair(struct paillier_Keychain *keychain)
 {
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
     {
-        printf("\t * Falied to generate CTX! (scheme 1, generate keypair)\n");
+        printf(" * Falied to generate CTX! (scheme 1, generate keypair)\n");
         return err;
     }
 
-    err = gen_pqg_params(keychain->sk.p, keychain->sk.q, keychain->sk.lambda, keychain->pk);
+    err = gen_pqg_params(keychain->sk->p, keychain->sk->q, keychain->sk->lambda, keychain->pk);
     if(err != 1)
     {
-        printf("\t * Generate P, Q, G, params failed! (scheme 1, generate keypair)\n");
+        printf(" * Generate P, Q, G, params failed! (scheme 1, generate keypair)\n");
         goto end;
     }
-    err = count_mi(keychain->sk.mi, keychain->pk->g, keychain->sk.lambda, keychain->pk->n_sq, keychain->pk->n);
+    err = count_mi(keychain->sk->mi, keychain->pk->g, keychain->sk->lambda, keychain->pk->n_sq, keychain->pk->n);
     if(err != 1)
     {
-        printf("\t * Count MI failed! (scheme 1, generate keypair)\n");
+        printf(" * Count MI failed! (scheme 1, generate keypair)\n");
         goto end;
     }
 
@@ -33,7 +34,7 @@ unsigned int paillier_encrypt(struct paillier_PublicKey *pk, BIGNUM *plain, BIGN
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
     {
-        printf("\t * Falied to generate CTX! (scheme 1, encrypt)\n");
+        printf(" * Falied to generate CTX! (scheme 1, encrypt)\n");
         return err;
     }
 
@@ -41,7 +42,7 @@ unsigned int paillier_encrypt(struct paillier_PublicKey *pk, BIGNUM *plain, BIGN
 
     if (BN_cmp(plain, pk->n) != -1)
     {
-        printf("\t * Plaintext is bigger then the length of N! (scheme 1, encrypt)\n");
+        printf(" * Plaintext is bigger then the length of N! (scheme 1, encrypt)\n");
         goto end;
     }
 
@@ -50,23 +51,23 @@ unsigned int paillier_encrypt(struct paillier_PublicKey *pk, BIGNUM *plain, BIGN
         err = BN_mod_exp(precomp_message, pk->g, plain, pk->n_sq, ctx);
         if(err != 1)
         {
-            printf("\t * Message mod_exp operation falied! (scheme 1, encrypt)\n");
+            printf(" * Message mod_exp operation falied! (scheme 1, encrypt)\n");
             goto end;
         }
     }
     
     if (BN_is_zero(precomp_noise) == 1)
     {
-        err = generate_rnd(pk->n, pk->n, tmp_rnd, BITS);
+        err = generate_rnd_paillier(pk->n, pk->n, tmp_rnd);
         if(err != 1)
         {
-            printf("\t * Generate random falied! (scheme 1, encrypt)\n");
+            printf(" * Generate random falied! (scheme 1, encrypt)\n");
             goto end;
         }
         err = BN_mod_exp(precomp_noise, tmp_rnd, pk->n, pk->n_sq, ctx);
         if(err != 1)
         {
-            printf("\t * Noise mod_exp operation falied! (scheme 1, encrypt)\n");
+            printf(" * Noise mod_exp operation falied! (scheme 1, encrypt)\n");
             goto end;
         }
     }
@@ -74,7 +75,7 @@ unsigned int paillier_encrypt(struct paillier_PublicKey *pk, BIGNUM *plain, BIGN
     err = BN_mod_mul(cipher, precomp_message, precomp_noise, pk->n_sq, ctx);
     if(err != 1)
     {
-        printf("\t * Multiplication of message and noise falied! (scheme 1, encrypt)\n");
+        printf(" * Multiplication of message and noise falied! (scheme 1, encrypt)\n");
         goto end;
     }
 
@@ -91,28 +92,28 @@ unsigned int paillier_decrypt(struct paillier_Keychain *keychain, BIGNUM *cipher
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
     {
-        printf("\t * Falied to generate CTX! (scheme 1, decrypt)\n");
+        printf(" * Falied to generate CTX! (scheme 1, decrypt)\n");
         return err;
     }
 
     BIGNUM *u = BN_new();
 
-    err = BN_mod_exp(u, cipher, keychain->sk.lambda, keychain->pk->n_sq, ctx);
+    err = BN_mod_exp(u, cipher, keychain->sk->lambda, keychain->pk->n_sq, ctx);
     if(err != 1)
     {
-        printf("\t * Cipher mod_exp operation failed! (scheme 1, decrypt)\n");
+        printf(" * Cipher mod_exp operation failed! (scheme 1, decrypt)\n");
         goto end;
     }
     err = L(u, keychain->pk->n, u, ctx);
     if(err != 1)
     {
-        printf("\t * L function failed! (scheme 1, decrypt)\n");
+        printf(" * L function failed! (scheme 1, decrypt)\n");
         goto end;
     }
-    err = BN_mod_mul(plain, u, keychain->sk.mi, keychain->pk->n, ctx);
+    err = BN_mod_mul(plain, u, keychain->sk->mi, keychain->pk->n, ctx);
     if(err != 1)
     {
-        printf("\t * Cipher mod_mul operation failed! (scheme 1, decrypt)\n");
+        printf(" * Cipher mod_mul operation failed! (scheme 1, decrypt)\n");
         goto end;
     }
 
@@ -123,7 +124,35 @@ end:
     return err;
 }
 
+void init_paillier_keychain(struct paillier_Keychain *keychain)
+{
+    keychain->pk = (struct paillier_PublicKey *)malloc(sizeof(struct paillier_PublicKey));
+    keychain->pk->g = BN_new();
+    keychain->pk->n = BN_new();
+    keychain->pk->n_sq = BN_new();
+    keychain->sk = (struct paillier_PrivateKey *)malloc(sizeof(struct paillier_PrivateKey));
+    keychain->sk->lambda = BN_new();
+    keychain->sk->mi = BN_new();
+    keychain->sk->p = BN_new();
+    keychain->sk->q = BN_new();
 
+    return;
+}
+
+void free_paillier_keychain(struct paillier_Keychain *keychain)
+{
+    BN_free(keychain->pk->g);
+    BN_free(keychain->pk->n);
+    BN_free(keychain->pk->n_sq);
+    free(keychain->pk);
+    BN_free(keychain->sk->lambda);
+    BN_free(keychain->sk->mi);
+    BN_free(keychain->sk->p);
+    BN_free(keychain->sk->q);
+    free(keychain->sk);
+
+    return;
+}
 
 ////////////////////////////////////////////////////////
 // HOMOMORPHY FUNCTIONS ////////////////////////////////

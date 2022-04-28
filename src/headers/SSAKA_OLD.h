@@ -2,24 +2,12 @@
 #define __SSAKA_H__
 
 // extern headers
-#include <AKA.h>
-#include <globals.h>
+#include <support_functions.h>
+#include <schnorrs_signature_OLD.h>
+#include <paishamir_OLD.h>
 #include <paillier_scheme.h>
-
-// structures definition
-struct ssaka_Keychain {
-    BIGNUM *ID;
-    struct schnorr_Keychain *keys;
-    BIGNUM *kappa;
-};
-
-
-extern struct aka_Keychain g_ssaka_serverKeys;
-extern struct ssaka_Keychain g_ssaka_devicesKeys[];
-
-extern struct paillier_Keychain g_paiKeys;
-extern unsigned int currentNumberOfDevices;
-extern BIGNUM *pk_c;
+#include <AKA_OLD.h>
+#include <globals.h>
 
 // int SETUP (int kappa);
 // int CLIENT_REGISTER (int kappa);
@@ -30,6 +18,8 @@ unsigned int ssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int 
 unsigned int ssaka_akaServerSignVerify(unsigned int list_of_used_devs[], unsigned int size, BIGNUM * Y, struct ServerSign *server);
 unsigned int ssaka_clientProofVerify(unsigned int list_of_used_devs[], unsigned int size, BIGNUM *Y, struct schnorr_Signature *server_signature, struct ClientProof *client);
 // unsigned int ssaka_DeviceProof(BIGNUM *t_s_chck, BIGNUM *sk_i, struct DeviceProof *device);
+void init_ssaka_mem();
 void free_ssaka_mem();
+void ssaka_keyPrinter(struct ssaka_Keychain *key);
 
 #endif
