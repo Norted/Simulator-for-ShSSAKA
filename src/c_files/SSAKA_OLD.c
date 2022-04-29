@@ -235,6 +235,7 @@ unsigned int ssaka_akaServerSignVerify(unsigned int list_of_used_devs[], unsigne
 
     BN_copy(client.signature->r, signature.r);
     BN_dec2bn(&server->kappa, "1");
+    printf("** S_kappa: %s\n", BN_bn2dec(server->kappa));
     sprintf(ver, "%d", schnorr_verify(g_globals.params, pk_c, Y, server->kappa, client.signature));
     BN_dec2bn(&server->tau_s, ver);
 

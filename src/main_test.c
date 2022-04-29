@@ -151,20 +151,20 @@ int main(void)
             ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
         } */
 
-        /* err = ssaka_akaServerSignVerify(&list_of_used_devs, size_used, message, &server);
-        if(err != 1)
-        {
-            printf(" * SSAKA Server Sign Verify failed!\n");
-            return_code = 0;
-            goto end;
-        } */
-        err = ssaka_akaServerSignVerify(&list_of_all_devs, size_all, message, &server);
+        err = ssaka_akaServerSignVerify(&list_of_used_devs, size_used, message, &server);
         if(err != 1)
         {
             printf(" * SSAKA Server Sign Verify failed!\n");
             return_code = 0;
             goto end;
         }
+        /* err = ssaka_akaServerSignVerify(&list_of_all_devs, size_all, message, &server);
+        if(err != 1)
+        {
+            printf(" * SSAKA Server Sign Verify failed!\n");
+            return_code = 0;
+            goto end;
+        } */
 
         printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
     end:
