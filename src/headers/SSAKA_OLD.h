@@ -3,10 +3,10 @@
 
 // extern headers
 #include <support_functions.h>
-#include <schnorrs_signature_OLD.h>
+#include <schnorrs_signature.h>
 #include <paishamir_OLD.h>
 #include <paillier_scheme.h>
-#include <AKA_OLD.h>
+#include <AKA.h>
 #include <globals.h>
 
 // int SETUP (int kappa);

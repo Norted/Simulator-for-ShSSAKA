@@ -1,4 +1,4 @@
-#include <schnorrs_signature_OLD.h>
+#include <schnorrs_signature.h>
 
 unsigned int gen_schnorr_params(DSA *dsa, struct schnorr_Params *params)
 {    

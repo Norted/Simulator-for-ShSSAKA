@@ -4,11 +4,11 @@
 #include <string.h>
 // local headers
 #include <globals.h>
-#include <schnorrs_signature_OLD.h>
+#include <schnorrs_signature.h>
 #include <paillier_scheme.h>
 #include <support_functions.h>
 #include <paishamir_OLD.h>
-#include <AKA_OLD.h>
+#include <AKA.h>
 #include <SSAKA_OLD.h>
 
 

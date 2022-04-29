@@ -1,7 +1,7 @@
 #ifndef __OPENSSL_BN_H__
 #define __OPENSSL_BN_H__
 
-#include <schnorrs_signature_OLD.h>
+#include <schnorrs_signature.h>
 #include <SSAKA_OLD.h>
 #include <globals.h>
 
