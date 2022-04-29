@@ -81,6 +81,8 @@ int main(int argc, char **argv)
   status = g_application_run(G_APPLICATION(app), argc, argv);
   g_object_unref(app);
 
+  DSA_free(dsa);
+  BN_free(Y);
   return status;
 }
 
@@ -224,9 +226,9 @@ static void activate(GtkApplication *app, gpointer *user_data)
 static void akaSetup(GtkWidget *button, GtkWidget *label)
 {
   unsigned int err = ssaka_setup();
-  if(err != 1)
+  if (err != 1)
   {
-      printf(" * SSAKA setup failed!\n");
+    printf(" * SSAKA setup failed!\n");
   }
   setButtons(TRUE);
 
@@ -236,7 +238,7 @@ static void akaSetup(GtkWidget *button, GtkWidget *label)
 
 static void akaServerSignVerify(GtkWidget *button, GtkWidget *label)
 {
-  struct ServerSign server = *(struct ServerSign*)malloc(sizeof(struct ServerSign));
+  struct ServerSign server = *(struct ServerSign *)malloc(sizeof(struct ServerSign));
   init_serversign(&server);
   gchar *dmp;
 
@@ -249,8 +251,8 @@ static void akaServerSignVerify(GtkWidget *button, GtkWidget *label)
 
   BN_dec2bn(&Y, lg_Y);
   printf("Y: %s\n", BN_bn2dec(Y));
-  ssaka_akaServerSignVerify(&used_devs, size_used, Y, &server);
-  if (BN_is_zero(server.tau_s) == 1)
+  unsigned int err = ssaka_akaServerSignVerify(&used_devs, size_used, Y, &server);
+  if (err != 1 || BN_is_zero(server.tau_s) == 1)
   {
     // g_strconcat (gtk_label_get_text (console), g_strdup_printf (str));
     dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\tTAU_S = %s\n\tVerification failed! :(\n", BN_bn2dec(server.tau_s)));
@@ -352,7 +354,7 @@ static void openParamDialogue(GtkWidget *button, gpointer *user_data)
   gtk_window_set_default_size(GTK_WINDOW(dialog), 200, 200);
 
   gchar *message = g_strdup_printf("\nY:\t%s\n\nQ:\t%s\n\nG:\t%s\n\n\nEscape by pressing ESC ...", lg_Y,
-                                    BN_bn2dec(g_globals.params->q), BN_bn2dec(g_globals.params->g));
+                                   BN_bn2dec(g_globals.params->q), BN_bn2dec(g_globals.params->g));
 
   GtkWidget *label = gtk_label_new(message);
   gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
