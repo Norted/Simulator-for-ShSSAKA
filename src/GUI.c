@@ -1,5 +1,6 @@
 //#include <AKA.h>
-#include <SSAKA.h>
+#include <SSAKA_OLD.h>
+#include <support_functions.h>
 #include <gtk/gtk.h>
 #include <globals.h>
 
@@ -32,9 +33,21 @@ void setButtons(gboolean enabled);
 void setCSS();
 
 /*  GLOBALS */
+// Keychains
+struct aka_Keychain g_serverKeys;
+struct aka_Keychain g_aka_clientKeys;
+extern struct ssaka_Keychain g_ssaka_devicesKeys[G_NUMOFDEVICES];
+
+struct paillier_Keychain g_paiKeys;
+BIGNUM *pk_c;
+
+// Other globals
 struct globals g_globals;
+unsigned int currentNumberOfDevices = 4;
+DSA *dsa;
 
 gchar *lg_Y = "100";
+BIGNUM *Y;
 
 guint64 add_number = 1;
 
@@ -55,8 +68,11 @@ int main(int argc, char **argv)
 {
   GtkApplication *app;
   int status;
-  g_globals.params = malloc(sizeof(struct schnorr_Params));
-  gen_schnorr_params(g_globals.params);
+  dsa = DSA_new();
+  g_globals.params = (struct schnorr_Params *)malloc(sizeof(struct schnorr_Params));
+  init_schnorr_params(g_globals.params);
+  gen_schnorr_params(dsa, g_globals.params);
+  g_globals.idCounter = 1;
 
   gtk_init(&argc, &argv);
   setCSS();
@@ -207,7 +223,11 @@ static void activate(GtkApplication *app, gpointer *user_data)
 /*  BUTTON FUNCTIONS  */
 static void akaSetup(GtkWidget *button, GtkWidget *label)
 {
-  ssaka_setup();
+  unsigned int err = ssaka_setup();
+  if(err != 1)
+  {
+      printf(" * SSAKA setup failed!\n");
+  }
   setButtons(TRUE);
 
   gchar *dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\tParameters initialized!\n"));
@@ -216,25 +236,28 @@ static void akaSetup(GtkWidget *button, GtkWidget *label)
 
 static void akaServerSignVerify(GtkWidget *button, GtkWidget *label)
 {
-  struct ServerSign server = {{""}};
+  struct ServerSign server = *(struct ServerSign*)malloc(sizeof(struct ServerSign));
+  init_serversign(&server);
   gchar *dmp;
 
   if (size_used == 0)
   {
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\tDefine used devices first!", server.tau_s));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\tDefine used devices first!", BN_bn2dec(server.tau_s)));
     updateLabel(GTK_LABEL(label), dmp);
     return;
   }
 
-  ssaka_akaServerSignVerify(&used_devs, size_used, lg_Y, &server);
-  if (strcmp(server.tau_s, "0") == 0)
+  BN_dec2bn(&Y, lg_Y);
+  printf("Y: %s\n", BN_bn2dec(Y));
+  ssaka_akaServerSignVerify(&used_devs, size_used, Y, &server);
+  if (BN_is_zero(server.tau_s) == 1)
   {
     // g_strconcat (gtk_label_get_text (console), g_strdup_printf (str));
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\tTAU_S = %s\n\tVerification failed! :(\n", server.tau_s));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\tTAU_S = %s\n\tVerification failed! :(\n", BN_bn2dec(server.tau_s)));
   }
   else
   {
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\tTAU_S = %s\n\tVerification proceeded! :)\n", server.tau_s));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\tTAU_S = %s\n\tVerification proceeded! :)\n", BN_bn2dec(server.tau_s)));
   }
   updateLabel(GTK_LABEL(label), dmp);
 }
@@ -264,7 +287,7 @@ static void ssakaRevShare(GtkWidget *button, GtkWidget *label)
   gchar *dmp;
   if (err == 1)
   {
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\t%lu devices removed!", size_revoke));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\t%d devices removed!", size_revoke));
     updateLabel(GTK_LABEL(label), dmp);
   }
   else if (err == 2)
@@ -292,12 +315,14 @@ static void openKeysDialogue(GtkWidget *button, gpointer *user_data)
   gtk_container_set_border_width(GTK_CONTAINER(dialog), 10);
   gtk_window_set_default_size(GTK_WINDOW(dialog), 500, 500);
 
-  gchar *message = g_strdup_printf(" --- Server --- \nID:\t%s\nPK:\t%s\nSK:\t%s\n\n --- Client --- \nID:\t%s\nPK:\t%s\nSK:\t%s\n\n==================\n\n",
-                                   g_ssaka_serverKeys.ID, g_ssaka_serverKeys.keys->pk, g_ssaka_serverKeys.keys->sk, g_ssaka_devicesKeys[0].ID, g_ssaka_devicesKeys[0].keys->pk, g_ssaka_devicesKeys[0].keys->sk);
+  gchar *message = g_strdup_printf(" --- Server --- \nID:\t%u\nPK:\t%s\nSK:\t%s\n\n --- Client --- \nID:\t%u\nPK:\t%s\nSK:\t%s\n\n==================\n\n",
+                                   g_serverKeys.ID, BN_bn2dec(g_serverKeys.keys->pk), BN_bn2dec(g_serverKeys.keys->sk), g_ssaka_devicesKeys[0].ID,
+                                   BN_bn2dec(g_ssaka_devicesKeys[0].keys->pk), BN_bn2dec(g_ssaka_devicesKeys[0].keys->sk));
   for (int i = 1; i < currentNumberOfDevices; i++)
   {
-    message = g_strconcat(message, g_strdup_printf("--- Device %d ---\nID:\t%s\nPK:\t%s\nSK:\t%s\n\n",
-                                                   i, g_ssaka_devicesKeys[i].ID, g_ssaka_devicesKeys[i].keys->pk, g_ssaka_devicesKeys[i].keys->sk));
+    message = g_strconcat(message, g_strdup_printf("--- Device %d ---\nID:\t%u\nPK:\t%s\nSK:\t%s\n\n",
+                                                   i, g_ssaka_devicesKeys[i].ID, BN_bn2dec(g_ssaka_devicesKeys[i].keys->pk),
+                                                   BN_bn2dec(g_ssaka_devicesKeys[i].keys->sk)));
   }
   message = g_strconcat(message, g_strdup_printf("\nEscape by pressing ESC ..."));
 
@@ -326,7 +351,8 @@ static void openParamDialogue(GtkWidget *button, gpointer *user_data)
   gtk_container_set_border_width(GTK_CONTAINER(dialog), 10);
   gtk_window_set_default_size(GTK_WINDOW(dialog), 200, 200);
 
-  gchar *message = g_strdup_printf("\nY:\t%s\n\nQ:\t%s\n\nG:\t%s\n\n\nEscape by pressing ESC ...", lg_Y, g_globals.params->q, g_globals.params->g);
+  gchar *message = g_strdup_printf("\nY:\t%s\n\nQ:\t%s\n\nG:\t%s\n\n\nEscape by pressing ESC ...", lg_Y,
+                                    BN_bn2dec(g_globals.params->q), BN_bn2dec(g_globals.params->g));
 
   GtkWidget *label = gtk_label_new(message);
   gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);

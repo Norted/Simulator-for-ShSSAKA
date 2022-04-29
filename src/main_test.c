@@ -84,7 +84,7 @@ int main(void)
         free_DSA(dsa);
     */
 
-    /*  SSAKA test  
+    /*  SSAKA test  */
         BIGNUM * message = BN_new();
         BN_dec2bn(&message, "1234");
 
@@ -103,7 +103,6 @@ int main(void)
         unsigned int list_of_used_devs[] = {1, 2};
         unsigned int size_used = sizeof(list_of_used_devs)/sizeof(unsigned int);
 
-        g_globals.idCounter = 1;
         g_globals.params = (struct schnorr_Params *)malloc(sizeof(struct schnorr_Params));
         if (g_globals.params == NULL)
         {
@@ -113,6 +112,7 @@ int main(void)
         }
         init_schnorr_params(g_globals.params);
         gen_schnorr_params(dsa, g_globals.params);
+        g_globals.idCounter = 1;
 
         err = ssaka_setup();
         if(err != 1)
@@ -122,39 +122,49 @@ int main(void)
             goto end;
         }
 
-        /*
-            err = ssaka_ClientAddShare(3);
-            printf("\n+++ ADDED! +++\n");
-            for (int j = 1; j < currentNumberOfDevices; j++) {
-                printf("--- DEVICE %d ---\n", j);
-                ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
-            }
+        /* err = ssaka_ClientAddShare(3);
+        if(err != 1)
+        {
+            printf(" * AddShare failed!\n");
+            return_code = 0;
+            goto end;
+        }
+        printf("\n+++ ADDED! +++\n");
+        for (int j = 1; j < currentNumberOfDevices; j++) {
+            printf("--- DEVICE %d ---\n", j);
+            ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
+        }
 
-            unsigned int remove[] = {1, 3};
-            unsigned int size_remove = sizeof(remove)/sizeof(unsigned int);
-            err = ssaka_ClientRevShare(remove, size_remove);
+        unsigned int remove[] = {1, 3};
+        unsigned int size_remove = sizeof(remove)/sizeof(unsigned int);
+        err = ssaka_ClientRevShare(remove, size_remove);
+        if(err != 1)
+        {
+            printf(" * RevShare failed!\n");
+            return_code = 0;
+            goto end;
+        }
 
-            printf("\n--- REMOVED ---\n");
-            for (int j = 1; j < currentNumberOfDevices; j++) {
-                printf("--- DEVICE %d ---\n", j);
-                ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
-            }
-        //
+        printf("\n--- REMOVED ---\n");
+        for (int j = 1; j < currentNumberOfDevices; j++) {
+            printf("--- DEVICE %d ---\n", j);
+            ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
+        } */
 
-        err = ssaka_akaServerSignVerify(&list_of_used_devs, size_used, message, &server);
+        /* err = ssaka_akaServerSignVerify(&list_of_used_devs, size_used, message, &server);
+        if(err != 1)
+        {
+            printf(" * SSAKA Server Sign Verify failed!\n");
+            return_code = 0;
+            goto end;
+        } */
+        err = ssaka_akaServerSignVerify(&list_of_all_devs, size_all, message, &server);
         if(err != 1)
         {
             printf(" * SSAKA Server Sign Verify failed!\n");
             return_code = 0;
             goto end;
         }
-        /* err = ssaka_akaServerSignVerify(&list_of_all_devs, size_all, message, &server);
-        if(err != 1)
-        {
-            printf(" * SSAKA Server Sign Verify failed!\n");
-            return_code = 0;
-            goto end;
-        } //
 
         printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
     end:
@@ -167,9 +177,9 @@ int main(void)
         BN_free(message);
         DSA_free(dsa);
 
-    */
+    //*/
 
-    /*  PAILLIER-SHAMIR test    */
+    /*  PAILLIER-SHAMIR test    
     printf("\n\n---PAILLIER-SHAMIR test---\n"); 
 
     BIGNUM *message = BN_new();
@@ -254,9 +264,9 @@ int main(void)
         printf("\n- DEVICE %d -\n", i);
         ssaka_keyPrinter(&g_ssaka_devicesKeys[i]);
     }
-    printf("\n"); */
+    printf("\n"); //
 
-    err = paiShamir_interpolation(/*list_of_used_devs, size_used, */ list_of_all_devs, size_all, message_chck);
+    err = paiShamir_interpolation(/*list_of_used_devs, size_used, // list_of_all_devs, size_all, message_chck);
     if (err != 1)
     {
         printf(" * Failed to interpolate!\n");
@@ -282,7 +292,7 @@ end:
     }
     
     DSA_free(dsa);
-    //*/
+    */
 
     /*  PAILLIER-SHAMIR test NO#2   
     err = test_paiShamir();

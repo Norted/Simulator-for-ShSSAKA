@@ -81,6 +81,7 @@ end:
 
 unsigned int ssaka_KeyGeneration(struct ssaka_Keychain *keys)
 {
+    keys->keys = (struct schnorr_Keychain*)malloc(sizeof(struct schnorr_Keychain));
     init_schnorr_keychain(keys->keys);
     unsigned int err = rand_range(keys->keys->pk, g_paiKeys.pk->n);
     keys->ID = g_globals.idCounter++;
@@ -142,9 +143,8 @@ unsigned int ssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int 
             printf("Cannot remove client (0)!\n");
             return 3;
         }
-        BN_free(g_ssaka_devicesKeys[rev_devices_list[i]].keys->pk);
-        BN_free(g_ssaka_devicesKeys[rev_devices_list[i]].keys->sk);
-        g_ssaka_devicesKeys[rev_devices_list[i]].keys = NULL;
+        free_schnorr_keychain(g_ssaka_devicesKeys[rev_devices_list[i]].keys);
+        free(g_ssaka_devicesKeys[rev_devices_list[i]].keys);
     }
 
     unsigned int index_list_size = currentNumberOfDevices - list_size;
@@ -169,9 +169,8 @@ unsigned int ssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int 
         else
         {
             //g_ssaka_devicesKeys[i].ID = NULL;
-            BN_free(g_ssaka_devicesKeys[i].keys->pk);
-            BN_free(g_ssaka_devicesKeys[i].keys->sk);
-            g_ssaka_devicesKeys[i].keys = NULL;
+            free_schnorr_keychain(g_ssaka_devicesKeys[i].keys);
+            free(g_ssaka_devicesKeys[i].keys);
             BN_free(g_ssaka_devicesKeys[i].kappa);
         }
     }
@@ -198,7 +197,7 @@ unsigned int ssaka_akaServerSignVerify(unsigned int list_of_used_devs[], unsigne
 {
     unsigned int err = 0;
 
-    unsigned char *ver = malloc(sizeof(unsigned char) * BUFFER);
+    unsigned char *ver = (unsigned char *)malloc(sizeof(unsigned char) * BUFFER);
     struct ClientProof client;
     struct schnorr_Signature signature;
     init_clientproof(&client);
@@ -256,7 +255,7 @@ unsigned int ssaka_clientProofVerify(unsigned int list_of_used_devs[], unsigned 
     unsigned int err = 0;
     int i = 0;
 
-    unsigned char *str_ver = malloc(sizeof(unsigned char) * BUFFER);
+    unsigned char *str_ver = (unsigned char *)malloc(sizeof(unsigned char) * BUFFER);
     unsigned int interpolation_list[size + 1];
     interpolation_list[size] = 0;
     struct DeviceProof devices[size];
@@ -493,7 +492,7 @@ unsigned int _get_pk_c()
 
 end:
     BN_CTX_free(ctx);
-    return 1;
+    return err;
 }
 
 void init_ssaka_mem()
@@ -517,9 +516,9 @@ void free_ssaka_mem()
     free_paillier_keychain(&g_paiKeys);
     for (int i = 0; i < currentNumberOfDevices; i++)
     {
-        BN_free(g_ssaka_devicesKeys[i].keys->pk);
-        BN_free(g_ssaka_devicesKeys[i].keys->sk);
+        free_schnorr_keychain(g_ssaka_devicesKeys[i].keys);
         free(g_ssaka_devicesKeys[i].keys);
+        BN_free(g_ssaka_devicesKeys[i].kappa);
     }
 
     return;
