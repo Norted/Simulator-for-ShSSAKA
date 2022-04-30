@@ -337,6 +337,7 @@ unsigned int paiShamir_interpolation(unsigned int *devices_list, unsigned int si
         goto end;
     }
 
+    BN_dec2bn(&secret, "0");
     for (int i = 0; i < size_of_list; i++)
     {
         err = part_interpolation(devices_list, size_of_list, i, sk_i);
@@ -383,24 +384,24 @@ unsigned int part_interpolation(unsigned int *devices_list, unsigned int size_of
         err = BN_mod_sub(sub, g_ssaka_devicesKeys[devices_list[i]].keys->pk, g_ssaka_devicesKeys[devices_list[current_device]].keys->pk, g_globals.params->q, ctx);
         if(err != 1)
         {
-            printf(" * Failed to compute the residuo of the PKs! (paishamir, part_interpolation)\n");
+            printf(" * Failed to compute the residuo of the PKs (#%d)! (paishamir, part_interpolation)\n", i);
             goto end;
         }        
         if(!BN_mod_inverse(inv, sub, g_globals.params->q, ctx))
         {
-            printf(" * Failed to compute the inverse! (paishamir, part_interpolation)\n");
+            printf(" * Failed to compute the inverse (#%d)! (paishamir, part_interpolation)\n", i);
             goto end;
         }
         err = BN_mod_mul(tmp_mul, g_ssaka_devicesKeys[devices_list[i]].keys->pk, inv, g_globals.params->q, ctx);
         if(err != 1)
         {
-            printf(" * Failed to multiply inverse with the PK! (paishamir, part_interpolation)\n");
+            printf(" * Failed to multiply inverse with the PK (#%d)! (paishamir, part_interpolation)\n", i);
             goto end;
         }
         err = BN_mod_mul(sk_i, sk_i, tmp_mul, g_globals.params->q, ctx);
         if(err != 1)
         {
-            printf(" * Failed to compute the SK_i! (paishamir, part_interpolation)\n");
+            printf(" * Failed to compute the SK_i #%d! (paishamir, part_interpolation)\n", i);
             goto end;
         }
     }

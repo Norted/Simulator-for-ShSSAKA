@@ -197,14 +197,22 @@ unsigned int ssaka_akaServerSignVerify(unsigned int list_of_used_devs[], unsigne
 {
     unsigned int err = 0;
 
-    unsigned char *ver = (unsigned char *)malloc(sizeof(unsigned char) * BUFFER);
-    struct ClientProof client;
-    struct schnorr_Signature signature;
-    init_clientproof(&client);
-    init_schnorr_signature(&signature);
-
     BIGNUM *zero = BN_new();
     BN_dec2bn(&zero, "0");
+
+    unsigned char *ver = (unsigned char *)malloc(sizeof(unsigned char) * BUFFER);
+    struct ClientProof client;
+    client = *(struct ClientProof*)malloc(sizeof(struct ClientProof));
+    struct schnorr_Signature signature;
+    signature = *(struct schnorr_Signature*)malloc(sizeof(struct schnorr_Signature));
+    if(ver == NULL || &client == NULL || &signature == NULL)
+    {
+        printf(" * ALLOCATION FAIL! (SSAKA, ssaka_akaServerSignVerify)\n");
+        goto end;
+    }
+
+    init_clientproof(&client);
+    init_schnorr_signature(&signature);
 
     if (BN_is_zero(Y) == 1 || BN_is_zero(g_serverKeys.keys->sk) == 1 || BN_is_zero(g_ssaka_devicesKeys[0].keys->pk) == 1)
     {
@@ -225,6 +233,7 @@ unsigned int ssaka_akaServerSignVerify(unsigned int list_of_used_devs[], unsigne
      *         (aka_clientProofVerify)
      *  Server  ←   (tau_c, kappa)  ←   Client
      */
+    printf("\n~~~ DEBUG ~~~\n");
     err = ssaka_clientProofVerify(list_of_used_devs, size, Y, &signature, &client);
     if (err != 1 || BN_is_zero(client.tau_c) == 1)
     {
@@ -233,14 +242,16 @@ unsigned int ssaka_akaServerSignVerify(unsigned int list_of_used_devs[], unsigne
         goto end;
     }
 
-    BN_copy(client.signature->r, signature.r);
+    printf(" <<< CLIENT PROOF >>>\n");
     BN_dec2bn(&server->kappa, "1");
-    printf("** S_kappa: %s\n", BN_bn2dec(server->kappa));
+    BN_copy(client.signature->r, signature.r);
     sprintf(ver, "%d", schnorr_verify(g_globals.params, pk_c, Y, server->kappa, client.signature));
     BN_dec2bn(&server->tau_s, ver);
 
     if (BN_cmp(server->kappa, client.kappa) == 0)
         printf("\n~ GOOD! :)\n\n");
+    else
+        err = 0;
 
 end:
     free_clientproof(&client);
@@ -253,10 +264,11 @@ end:
 unsigned int ssaka_clientProofVerify(unsigned int list_of_used_devs[], unsigned int size, BIGNUM *Y,
                                      struct schnorr_Signature *server_signature, struct ClientProof *client)
 {
+    printf(" >>> CLIENT PROOF <<<\n");
     unsigned int err = 0;
     int i = 0;
 
-    unsigned char *str_ver = (unsigned char *)malloc(sizeof(unsigned char) * BUFFER);
+    unsigned char *ver = (unsigned char *)malloc(sizeof(unsigned char) * BUFFER);
     unsigned int interpolation_list[size + 1];
     interpolation_list[size] = 0;
     struct DeviceProof devices[size];
@@ -264,6 +276,7 @@ unsigned int ssaka_clientProofVerify(unsigned int list_of_used_devs[], unsigned 
     BIGNUM *r_i[size];
     for (i; i < size; i++)
     {
+        devices[i] = *(struct DeviceProof *)malloc(sizeof(struct DeviceProof));
         init_deviceproof(&devices[i]);
         t_i[i] = BN_new();
         r_i[i] = BN_new();
@@ -281,8 +294,8 @@ unsigned int ssaka_clientProofVerify(unsigned int list_of_used_devs[], unsigned 
         goto end;
     }
 
-    sprintf(str_ver, "%d", schnorr_verify(g_globals.params, g_serverKeys.keys->pk, Y, zero, server_signature));
-    BN_dec2bn(&client->tau_c, str_ver);
+    sprintf(ver, "%d", schnorr_verify(g_globals.params, g_serverKeys.keys->pk, Y, zero, server_signature));
+    BN_dec2bn(&client->tau_c, ver);
 
     if (BN_is_zero(client->tau_c) == 1)
     {
@@ -368,6 +381,7 @@ unsigned int ssaka_clientProofVerify(unsigned int list_of_used_devs[], unsigned 
         printf(" * Hash creation failed! (SSAKA, ssaka_clientProofVerify)\n");
         goto end;
     }
+    printf("\n>> new S_H: %s\n\n", BN_bn2dec(client->signature->hash));
 
     for (i = 0; i < size; i++)
     {
@@ -502,7 +516,6 @@ void init_ssaka_mem()
     init_paillier_keychain(&g_paiKeys);
     for (int i = 0; i < currentNumberOfDevices; i++)
     {
-        g_ssaka_devicesKeys[i].ID = g_globals.idCounter++;
         g_ssaka_devicesKeys[i].keys = (struct schnorr_Keychain *) malloc(sizeof(struct schnorr_Keychain));
         init_schnorr_keychain(g_ssaka_devicesKeys[i].keys);
         g_ssaka_devicesKeys[i].kappa = BN_new();

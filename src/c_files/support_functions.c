@@ -408,7 +408,7 @@ void free_serversign(struct ServerSign *server_sign)
 void init_clientproof(struct ClientProof *client_proof)
 {
     client_proof->tau_c = BN_new();
-    client_proof->signature = malloc(sizeof(struct schnorr_Signature));
+    client_proof->signature = (struct schnorr_Signature *)malloc(sizeof(struct schnorr_Signature));
     init_schnorr_signature(client_proof->signature);
     client_proof->kappa = BN_new();
     return;

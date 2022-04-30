@@ -90,10 +90,6 @@ int main(void)
 
         dsa = DSA_new();
 
-        struct ServerSign server;
-        server = *(struct ServerSign *)malloc(sizeof(struct ServerSign));
-        init_serversign(&server);
-
         unsigned int list_of_all_devs[currentNumberOfDevices-1];
         for (int i = 1; i < currentNumberOfDevices; i++) {
             list_of_all_devs[i-1] = i;  //(unsigned int) atoi(g_ssaka_devicesKeys[i].ID);
@@ -102,6 +98,16 @@ int main(void)
 
         unsigned int list_of_used_devs[] = {1, 2};
         unsigned int size_used = sizeof(list_of_used_devs)/sizeof(unsigned int);
+
+        struct ServerSign server;
+        server = *(struct ServerSign *)malloc(sizeof(struct ServerSign));
+        if (&server == NULL)
+        {
+            printf(" * SERVER SIGN ALOCATION FAILED!\n");
+            return_code = 0;
+            goto end;
+        }
+        init_serversign(&server);
 
         g_globals.params = (struct schnorr_Params *)malloc(sizeof(struct schnorr_Params));
         if (g_globals.params == NULL)
@@ -121,6 +127,14 @@ int main(void)
             return_code = 0;
             goto end;
         }
+
+        printf("\n~~~ MAIN DEBUG ~~~\n");
+        for (int i = 0; i < size_used; i++)
+        {
+            printf("--- DEVICE %d ---\n", i);
+            ssaka_keyPrinter(&g_ssaka_devicesKeys[list_of_used_devs[i]]);
+        }
+        printf("~~~~~~~~~~~~~~~~~~\n\n");
 
         /* err = ssaka_ClientAddShare(3);
         if(err != 1)
