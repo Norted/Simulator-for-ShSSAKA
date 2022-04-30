@@ -33,8 +33,8 @@ unsigned int ssaka_setup()
         goto end;
     }
 
-    printf("---SERVER---\n");
-    aka_keyPrinter(&g_serverKeys);
+    /* printf("---SERVER---\n");
+    aka_keyPrinter(&g_serverKeys); */
     if (!g_serverKeys.ID)
     {
         printf(" * Initialization of the SSAKA Keys failed! (SSAKA, ssaka_setup)\n");
@@ -65,15 +65,18 @@ unsigned int ssaka_setup()
         printf(" * Computation of the common PK failed! (SSAKA, ssaka_setup)\n");
         goto end;
     }
+    // DEBUG CODE
+        printf(">> PK_C: %s\n", BN_bn2dec(pk_c));
+    //
 
-    printf("--- CLIENT ---\n");
+    /* printf("--- CLIENT ---\n");
     ssaka_keyPrinter(&g_ssaka_devicesKeys[0]);
 
     for (i = 1; i < currentNumberOfDevices; i++)
     {
         printf("--- DEVICE %d ---\n", i);
         ssaka_keyPrinter(&g_ssaka_devicesKeys[i]);
-    }
+    } */
 
 end:
     return err;
@@ -126,7 +129,7 @@ end:
     return err;
 }
 
-unsigned int ssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int list_size)
+unsigned int ssaka_ClientRevShare(unsigned int *rev_devices_list, unsigned int list_size)
 {
     int i = 0;
     unsigned int err = 0;
@@ -193,7 +196,7 @@ end:
     return err;
 }
 
-unsigned int ssaka_akaServerSignVerify(unsigned int list_of_used_devs[], unsigned int size, BIGNUM *Y, struct ServerSign *server)
+unsigned int ssaka_akaServerSignVerify(unsigned int *list_of_used_devs, unsigned int size, BIGNUM *Y, struct ServerSign *server)
 {
     unsigned int err = 0;
 
@@ -261,7 +264,7 @@ end:
     return err;
 }
 
-unsigned int ssaka_clientProofVerify(unsigned int list_of_used_devs[], unsigned int size, BIGNUM *Y,
+unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned int size, BIGNUM *Y,
                                      struct schnorr_Signature *server_signature, struct ClientProof *client)
 {
     printf(" >>> CLIENT PROOF <<<\n");
@@ -503,7 +506,17 @@ unsigned int _get_pk_c()
         printf(" * Shamir interpolation failed! (SSAKA, _get_pk_c)\n");
         goto end;
     }
-    err = BN_mod_exp(pk_c, g_globals.params->g, pk_c, g_globals.params->p, ctx);
+    
+    // DEBUG CODE
+        printf(">> INTER_OUT: %s\n", BN_bn2dec(pk_c));
+    //
+
+    err = BN_mod_exp(pk_c, g_globals.params->g, pk_c, g_globals.params->q, ctx); // ->p
+    if (err != 1)
+    {
+        printf(" * Computation of PK failed! (SSAKA, _get_pk_c)\n");
+        goto end;
+    }
 
 end:
     BN_CTX_free(ctx);

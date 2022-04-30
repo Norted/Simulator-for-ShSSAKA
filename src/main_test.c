@@ -11,7 +11,6 @@
 #include <AKA.h>
 #include <SSAKA_OLD.h>
 
-
 // Keychains
 struct aka_Keychain g_serverKeys;
 struct aka_Keychain g_aka_clientKeys;
@@ -33,28 +32,44 @@ int main(void)
     unsigned int return_code = 1;
     unsigned int err = 0;
 
+    dsa = DSA_new();
+    if(!dsa)
+    {
+        printf(" * DSA initialization failed!\n");
+        return 0;
+    }
+
+    g_globals.idCounter = 1;
+    g_globals.params = (struct schnorr_Params *)malloc(sizeof(struct schnorr_Params));
+    if (g_globals.params == NULL)
+    {
+        printf(" * PARAMS ALOCATION FAILED!\n");
+        return_code = 0;
+        return 0;
+    }
+    init_schnorr_params(g_globals.params);
+    err = gen_schnorr_params(dsa, g_globals.params);
+    if (err != 1)
+    {
+        printf(" * Failed to generate Schnorr params!\n");
+        return_code = 0;
+        return 0;
+    }
+
+    BIGNUM *pk_c = BN_new();
+    BIGNUM * message = BN_new();
+    BN_dec2bn(&message, "1234");
+    
+
     /*  AKA-SETUP and AKA-CLIENT-REGISTER
      *      1) randomly initialize generator from GENERATORS
      *      2) generate keys for devices, client and server side
      */
 
     /*  AKA test
-        BIGNUM * message = BN_new();
-        BN_dec2bn(&message, "1234");
 
         struct ServerSign server;
         init_serversign(&server);
-
-        g_globals.idCounter = 1;
-        g_globals.params = malloc(sizeof(struct schnorr_Params));
-        if (g_globals.params == NULL)
-        {
-            printf(" * PARAMS ALOCATION FAILED!\n");
-            return_code = 0;
-            goto end;
-        }
-        init_schnorr_params(g_globals.params);
-        gen_schnorr_params(g_globals.params);
 
         err = aka_setup();
         if (err != 1)
@@ -80,15 +95,10 @@ int main(void)
         free_schnorr_params(g_globals.params);
         free(g_globals.params);
         free_serversign(&server);
-        BN_free(message);
-        free_DSA(dsa);
     */
 
     /*  SSAKA test  */
-        BIGNUM * message = BN_new();
-        BN_dec2bn(&message, "1234");
-
-        dsa = DSA_new();
+        printf("\n\n---SSAKA test---\n");
 
         unsigned int list_of_all_devs[currentNumberOfDevices-1];
         for (int i = 1; i < currentNumberOfDevices; i++) {
@@ -109,17 +119,6 @@ int main(void)
         }
         init_serversign(&server);
 
-        g_globals.params = (struct schnorr_Params *)malloc(sizeof(struct schnorr_Params));
-        if (g_globals.params == NULL)
-        {
-            printf(" * PARAMS ALOCATION FAILED!\n");
-            return_code = 0;
-            goto end;
-        }
-        init_schnorr_params(g_globals.params);
-        gen_schnorr_params(dsa, g_globals.params);
-        g_globals.idCounter = 1;
-
         err = ssaka_setup();
         if(err != 1)
         {
@@ -127,14 +126,6 @@ int main(void)
             return_code = 0;
             goto end;
         }
-
-        printf("\n~~~ MAIN DEBUG ~~~\n");
-        for (int i = 0; i < size_used; i++)
-        {
-            printf("--- DEVICE %d ---\n", i);
-            ssaka_keyPrinter(&g_ssaka_devicesKeys[list_of_used_devs[i]]);
-        }
-        printf("~~~~~~~~~~~~~~~~~~\n\n");
 
         /* err = ssaka_ClientAddShare(3);
         if(err != 1)
@@ -165,7 +156,7 @@ int main(void)
             ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
         } */
 
-        err = ssaka_akaServerSignVerify(&list_of_used_devs, size_used, message, &server);
+        err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
         if(err != 1)
         {
             printf(" * SSAKA Server Sign Verify failed!\n");
@@ -188,19 +179,16 @@ int main(void)
         free_schnorr_params(g_globals.params);
         free(g_globals.params);
         free_serversign(&server);
-        BN_free(message);
-        DSA_free(dsa);
 
     //*/
 
     /*  PAILLIER-SHAMIR test    
-    printf("\n\n---PAILLIER-SHAMIR test---\n"); 
+    printf("\n\n---PAILLIER-SHAMIR test---\n");
 
-    BIGNUM *message = BN_new();
-    BN_dec2bn(&message, "1234");
-    BIGNUM *message_chck = BN_new();
-
-    dsa = DSA_new();
+    BIGNUM *sk_sum = BN_new();
+    BIGNUM *sk_chck = BN_new();
+    BIGNUM *pk_chck = BN_new();
+    BN_CTX *ctx = BN_CTX_secure_new();
 
     unsigned int list_of_used_devs[] = {1, 3, 2};
     unsigned int size_used = sizeof(list_of_used_devs) / sizeof(unsigned int);
@@ -212,29 +200,11 @@ int main(void)
     }
     unsigned int size_all = sizeof(list_of_all_devs) / sizeof(unsigned int);
 
-    g_globals.idCounter = 1;
-    g_globals.params = (struct schnorr_Params*)malloc(sizeof(struct schnorr_Params));
-    if (g_globals.params == NULL)
-    {
-        printf(" * PARAMS ALOCATION FAILED!\n");
-        return_code = 0;
-        goto end;
-    }
-    init_schnorr_params(g_globals.params);
-
     struct paillier_Keychain p_keychain;
     init_paillier_keychain(&p_keychain);
     if (&p_keychain.pk == NULL)
     {
         printf(" * Failed to init paillier keychain!\n");
-        return_code = 0;
-        goto end;
-    }
-
-    err = gen_schnorr_params(dsa, g_globals.params);
-    if (err != 1)
-    {
-        printf(" * Failed to generate Schnorr params!\n");
         return_code = 0;
         goto end;
     }
@@ -250,7 +220,7 @@ int main(void)
     for (int i = 0; i < currentNumberOfDevices; i++)
     {
         g_ssaka_devicesKeys[i].ID = g_globals.idCounter++;
-        g_ssaka_devicesKeys[i].keys = (struct schnorr_Keychain *) malloc(sizeof(struct schnorr_Keychain));
+        g_ssaka_devicesKeys[i].keys = (struct schnorr_Keychain *)malloc(sizeof(struct schnorr_Keychain));
         init_schnorr_keychain(g_ssaka_devicesKeys[i].keys);
         g_ssaka_devicesKeys[i].kappa = BN_new();
 
@@ -263,8 +233,8 @@ int main(void)
         }
     }
 
-    err = _shamir_distribution(message);
-    //err = paiShamir_distribution(&p_keychain);
+    // err = _shamir_distribution(message);
+    err = paiShamir_distribution(&p_keychain);
     if (err != 1)
     {
         printf(" * Failed to process Shamir's secret distribution!\n");
@@ -278,9 +248,9 @@ int main(void)
         printf("\n- DEVICE %d -\n", i);
         ssaka_keyPrinter(&g_ssaka_devicesKeys[i]);
     }
-    printf("\n"); //
+    printf("\n"); /
 
-    err = paiShamir_interpolation(/*list_of_used_devs, size_used, // list_of_all_devs, size_all, message_chck);
+    err = paiShamir_interpolation(list_of_used_devs, size_used, /*list_of_all_devs, size_all,/ sk_chck);
     if (err != 1)
     {
         printf(" * Failed to interpolate!\n");
@@ -288,13 +258,23 @@ int main(void)
         goto end;
     }
 
-    printf("\nRESULTS:\n|---> MESSAGE: %s\n|---> CHECK: %s\n", BN_bn2dec(message), BN_bn2dec(message_chck));
+    for (int i = 0; i < currentNumberOfDevices; i++)
+    {
+        err = BN_mod_add(sk_sum, sk_sum, g_ssaka_devicesKeys[i].keys->sk, g_globals.params->q, ctx);
+    }
+    err = BN_mod_exp(pk_c, g_globals.params->g, sk_sum, g_globals.params->q, ctx);
+
+    err = paiShamir_interpolation(list_of_all_devs, size_all, sk_chck);
+    err = BN_mod_exp(pk_chck, g_globals.params->g, sk_chck, g_globals.params->q, ctx);
+    printf("\nRESULTS:\n|---> M_SUM: %s\n|---> M_CHECK: %s\n|---> PK: %s\n|---> PK_CHECK: %s\n",
+           BN_bn2dec(sk_sum), BN_bn2dec(sk_chck), BN_bn2dec(pk_c), BN_bn2dec(pk_chck));
 
 end:
     printf("\nRETURN CODE: %u\n", return_code);
 
-    BN_free(message);
-    BN_free(message_chck);
+    BN_free(sk_chck);
+    BN_free(sk_sum);
+    BN_free(pk_chck);
     free_schnorr_params(g_globals.params);
     free(g_globals.params);
     free_paillier_keychain(&p_keychain);
@@ -304,29 +284,22 @@ end:
         free_schnorr_keychain(g_ssaka_devicesKeys[i].keys);
         free(g_ssaka_devicesKeys[i].keys);
     }
-    
-    DSA_free(dsa);
-    */
 
-    /*  PAILLIER-SHAMIR test NO#2   
+    BN_CTX_free(ctx);
+    //*/
+
+    /*  PAILLIER-SHAMIR test NO#2
     err = test_paiShamir();
     if(err != 1)
     {
         printf(" * FAIL!\n");
         return err;
     }
-    */
+    //*/
 
-    /*  SCHNORR test    
+    /*  SCHNORR test
         printf("\n\n---SCHNORR test---\n");
         int stop = 0;
-
-        dsa = DSA_new();
-        if(!dsa)
-        {
-            printf(" * DSA initialization failed!\n");
-            return 0;
-        }
 
         struct schnorr_Params params;
         init_schnorr_params(&params);
@@ -343,9 +316,6 @@ end:
         BN_dec2bn(&kappa_s, "1");
         BIGNUM *kappa_c = BN_new();
         BN_dec2bn(&kappa_c, "1");
-
-        BIGNUM *message = BN_new();
-        BN_dec2bn(&message, "1234");
 
         err = gen_schnorr_params(dsa, &params);
         if(err != 1)
@@ -432,7 +402,6 @@ end:
     end:
         printf("\n\nRETURN_CODE: %u\n", return_code);
 
-        DSA_free(dsa);
         free_schnorr_params(&params);
         free_schnorr_keychain(&keys_c);
         free_schnorr_keychain(&keys_s);
@@ -442,13 +411,11 @@ end:
         BN_free(kappa_s);
         BN_free(hash_prime);
         BN_free(zero);
-    */
+    //*/
 
     /*  PAILLIER test
         printf("\n\n---PAILLIER test---\n");
 
-        BIGNUM *message = BN_new();
-        BN_dec2bn(&message, "125");
         BIGNUM *enc = BN_new();
         BIGNUM *dec = BN_new();
 
@@ -515,7 +482,11 @@ end:
         BN_free(dec);
         BN_free(zero1);
         BN_free(zero2);
-    */
+    //*/
+
+    BN_free(message);
+    BN_free(pk_c);
+    DSA_free(dsa);
 
     return return_code;
 }
@@ -722,7 +693,7 @@ unsigned int test_paiShamir()
     BIGNUM *t_i[2];
     BIGNUM *kappa_i[2];
     BIGNUM *s_i[2];
-    for(int i = 0; i < 2; i++)
+    for (int i = 0; i < 2; i++)
     {
         r_i[i] = BN_new();
         t_i[i] = BN_new();
@@ -730,7 +701,7 @@ unsigned int test_paiShamir()
         s_i[i] = BN_new();
     }
     BIGNUM *kappa_inter[3];
-    for(int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++)
     {
         kappa_inter[i] = BN_new();
     }
@@ -743,68 +714,68 @@ unsigned int test_paiShamir()
         }
     }
     BN_CTX *ctx = BN_CTX_secure_new();
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         printf(" * Failed to generate CTX! (test_paiShamir, main)\n");
         goto end;
     }
-    
 
     err = gen_schnorr_params(dsa, &params);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Failed to generate Schnorr Params! (test_paiShamir, main)\n");
         goto end;
     }
     err = gen_schnorr_keys(dsa, &keys_server);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Failed to generate server Schnorr Keychain! (test_paiShamir, main)\n");
         goto end;
     }
     err = gen_schnorr_keys(dsa, &keys_client);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Failed to generate client Schnorr Keychain! (test_paiShamir, main)\n");
         goto end;
     }
     err = gen_schnorr_keys(dsa, &keys_device1);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Failed to generate device 1 Schnorr Keychain! (test_paiShamir, main)\n");
         goto end;
     }
     err = gen_schnorr_keys(dsa, &keys_device2);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Failed to generate device 2 Schnorr Keychain! (test_paiShamir, main)\n");
         goto end;
     }
 
-
     err = paillier_generate_keypair(&paikeys);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Failed to generate Paillier Keychain! (test_paiShamir, main)\n");
         goto end;
     }
 
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < 3; i++)
+    {
         err = rand_range(kappa_inter[i], paikeys.pk->n);
-        if(err != 1)
+        if (err != 1)
         {
             printf(" * Generate random KAPPA_INTER %d failed! (test_paiShamir, main)\n", i);
             goto end;
         }
         err = BN_add(SUM, kappa_inter[i], SUM);
-        if(err != 1)
+        if (err != 1)
         {
             printf(" * Failed to add KAPPA_INTER %d to SUM! (test_paiShamir, main)\n", i);
             goto end;
         }
-        for(int j = 0; j < G_POLYDEGREE; j++) {
+        for (int j = 0; j < G_POLYDEGREE; j++)
+        {
             err = rand_range(d[i][j], paikeys.pk->n);
-            if(err != 1)
+            if (err != 1)
             {
                 printf(" * Generate random D %d-%d failed! (test_paiShamir, main)\n", i, j);
                 goto end;
@@ -812,209 +783,203 @@ unsigned int test_paiShamir()
         }
     }
     printf("\n");
-    
+
     // SHARE
     err = paiShamir_get_ci(&paikeys, kappa_inter[0], d[0], keys_client.pk, c);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_ci #1 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = paiShamir_get_ci(&paikeys, kappa_inter[1], d[1], keys_client.pk, cN_prime);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_ci #2 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = paiShamir_get_ci(&paikeys, kappa_inter[2], d[2], keys_client.pk, ci);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_ci #3 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = paiShamir_get_cN_prime(&paikeys, cN_prime, ci, cN_prime);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_cN_prime #1 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = paiShamir_get_share(&paikeys, cN_prime, c, keys_client.sk);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_share #1 failed! (test_paiShamir, main)\n");
         goto end;
     }
     printf("SK_C: %s\n", BN_bn2dec(keys_client.sk));
 
-
     err = paiShamir_get_ci(&paikeys, kappa_inter[1], d[1], keys_device1.pk, c);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_ci #4 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = paiShamir_get_ci(&paikeys, kappa_inter[2], d[2], keys_device1.pk, cN_prime);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_ci #5 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = paiShamir_get_ci(&paikeys, kappa_inter[0], d[0], keys_device1.pk, ci);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_ci #6 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = paiShamir_get_cN_prime(&paikeys, cN_prime, ci, cN_prime);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_cN_prime #2 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = paiShamir_get_share(&paikeys, cN_prime, c, keys_device1.sk);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_share #2 failed! (test_paiShamir, main)\n");
         goto end;
     }
     printf("SK_1: %s\n", BN_bn2dec(keys_device1.sk));
 
-
     err = paiShamir_get_ci(&paikeys, kappa_inter[2], d[2], keys_device2.pk, c);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_ci #7 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = paiShamir_get_ci(&paikeys, kappa_inter[0], d[0], keys_device2.pk, cN_prime);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_ci #8 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = paiShamir_get_ci(&paikeys, kappa_inter[1], d[1], keys_device2.pk, ci);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_ci #9 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = paiShamir_get_cN_prime(&paikeys, cN_prime, ci, cN_prime);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_cN_prime #3 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = paiShamir_get_share(&paikeys, cN_prime, c, keys_device2.sk);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * paiShamir_get_share #3 failed! (test_paiShamir, main)\n");
         goto end;
     }
     printf("SK_2: %s\n", BN_bn2dec(keys_device2.sk));
 
-    
     printf("\nKappa_SUM: %s\n", BN_bn2dec(SUM));
     err = BN_mod_exp(SUM, params.g, SUM, params.p, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Failed to compute KAPPA_PK! (test_paiShamir, main)\n");
         goto end;
     }
     printf("\nKappa_PK: %s\n\n", BN_bn2dec(SUM));
 
-
     BN_copy(sk_sum, kappa_inter[0]);
     err = BN_add(sk_sum, kappa_inter[1], sk_sum);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Addition of KAPPA_INTER 1 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_add(sk_sum, kappa_inter[2], sk_sum);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Addition of KAPPA_INTER 2 failed! (test_paiShamir, main)\n");
         goto end;
     }
     printf("SK_C: %s\nSK_D1: %s\nSK_D2: %s\nSK_SUM: %s\n\n", BN_bn2dec(kappa_inter[0]), BN_bn2dec(kappa_inter[1]), BN_bn2dec(kappa_inter[2]), BN_bn2dec(sk_sum));
-    
 
     BN_copy(pk, keys_client.pk);
     err = BN_mul(pk, keys_device1.pk, pk, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Multiplication of PK 1 to PK failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mul(pk, keys_device2.pk, pk, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Multiplication of PK 2 to PK failed! (test_paiShamir, main)\n");
         goto end;
     }
 
     err = BN_mod_exp(pk_ch, params.g, sk_sum, params.p, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Creation of PK_CH failed! (test_paiShamir, main)\n");
         goto end;
     }
     printf("PK: %s\nPK_CH: %s\n\n", BN_bn2dec(pk), BN_bn2dec(pk_ch));
-    
 
     err = rand_range(r_s, params.q);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Generation of random R_S failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_exp(t_s, params.g, r_s, params.p, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of T_S failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = hash(e_s, Y, t_s, zero);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * E_S Hash creation failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_mul(s_s_mul, e_s, keys_server.sk, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of S_S_MUL failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_sub(s_s, r_s, s_s_mul, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of S_S failed! (test_paiShamir, main)\n");
         goto end;
     }
 
     //--------------------------
-    
+
     err = BN_mod_exp(ch_1, params.g, s_s, params.p, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of CH_1 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_exp(ch_2, keys_server.pk, e_s, params.p, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of CH_2 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_mul(t_s_ch, ch_1, ch_2, params.p, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of T_S_CH failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = hash(e_s_ch, Y, t_s_ch, zero);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * E_S_CH Hash creation failed! (test_paiShamir, main)\n");
         goto end;
@@ -1022,250 +987,248 @@ unsigned int test_paiShamir()
     int tau_c = BN_cmp(e_s, e_s_ch);
     printf("TAU_C: %d (if 0 --> OK!)\n", tau_c);
 
-
     err = rand_range(r_c, params.q);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Generation of random R_C failed! (test_paiShamir, main)\n");
         goto end;
     }
 
-    for(int i = 0; i < 2; i++) {
+    for (int i = 0; i < 2; i++)
+    {
         err = rand_range(r_i[i], params.q);
-        if(err != 1)
+        if (err != 1)
         {
             printf(" * Generation of a random R_I %d failed! (test_paiShamir, main)\n", i);
             goto end;
         }
         err = BN_mod_exp(t_i[i], params.g, r_i[i], params.p, ctx);
-        if(err != 1)
+        if (err != 1)
         {
             printf(" * Computation of T_I %d failed! (test_paiShamir, main)\n", i);
             goto end;
         }
         err = BN_mod_exp(kappa_i[i], t_s_ch, r_i[i], params.p, ctx);
-        if(err != 1)
+        if (err != 1)
         {
             printf(" * Computation of KAPPA_I %d failed! (test_paiShamir, main)\n", i);
             goto end;
         }
     }
 
-
     err = BN_mod_exp(t_c, params.g, r_c, params.p, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of T_C failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_exp(kappa_c, t_s_ch, r_c, params.p, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of KAPPA_C failed! (test_paiShamir, main)\n");
         goto end;
     }
-    for(int i = 0; i < 2; i++) {
+    for (int i = 0; i < 2; i++)
+    {
         err = BN_mod_mul(t_c, t_c, t_i[i], params.p, ctx);
-        if(err != 1)
+        if (err != 1)
         {
             printf(" * Computation of T_C failed in I = %d! (test_paiShamir, main)\n", i);
             goto end;
         }
         err = BN_mod_mul(kappa_c, kappa_c, kappa_i[i], params.p, ctx);
-        if(err != 1)
+        if (err != 1)
         {
             printf(" * Computation of KAPPA_C failed in I = %d! (test_paiShamir, main)\n", i);
             goto end;
         }
     }
     err = hash(e_c, Y, t_c, kappa_c);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * E_C Hash creation failed! (test_paiShamir, main)\n");
         goto end;
     }
     BN_copy(s_i[0], keys_device1.sk);
     err = BN_mod_sub(sub, keys_device2.pk, keys_device1.pk, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computationof SUB #1, failed! (test_paiShamir, main)\n");
         goto end;
     }
-    if(!BN_mod_inverse(inv, sub, params.q, ctx))
+    if (!BN_mod_inverse(inv, sub, params.q, ctx))
     {
         printf(" * Computation fo IVN #1 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_mul(mul, keys_device2.pk, inv, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of MUL #1 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_mul(s_i[0], s_i[0], mul, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of S_I 0 #1 failed! (test_paiShamin, main)\n");
         goto end;
     }
     err = BN_mod_sub(sub, keys_client.pk, keys_device1.pk, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of SUB #2 failed! (test_paiShamir, main)\n");
         goto end;
     }
-    if(!BN_mod_inverse(inv, sub, params.q, ctx))
+    if (!BN_mod_inverse(inv, sub, params.q, ctx))
     {
         printf(" * Computation fo INV #2 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_mul(mul, keys_client.pk, inv, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of MUL #2 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_mul(s_i[0], s_i[0], mul, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of S_I 0 #2 failed! (test_paiShamin, main)\n");
         goto end;
     }
-    
+
     BN_copy(s_i[1], keys_device2.sk);
     err = BN_mod_sub(sub, keys_device1.pk, keys_device2.pk, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computationof SUB #3, failed! (test_paiShamir, main)\n");
         goto end;
     }
-    if(!BN_mod_inverse(inv, sub, params.q, ctx))
-    if(err != 1)
-    {
-        printf(" * Computation of INV #3 failed! (test_paiShamir, main)\n");
-        goto end;
-    }
+    if (!BN_mod_inverse(inv, sub, params.q, ctx))
+        if (err != 1)
+        {
+            printf(" * Computation of INV #3 failed! (test_paiShamir, main)\n");
+            goto end;
+        }
     err = BN_mod_mul(mul, keys_device1.pk, inv, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Compuation of MUL #3 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_mul(s_i[1], s_i[1], mul, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of S_I 0 #1 failed! (test_paiShamin, main)\n");
         goto end;
     }
     err = BN_mod_sub(sub, keys_client.pk, keys_device2.pk, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computationof SUB #4, failed! (test_paiShamir, main)\n");
         goto end;
     }
-    if(!BN_mod_inverse(inv, sub, params.q, ctx))
-    if(err != 1)
-    {
-        printf(" * Computation of INV #4 failed! (test_paiShamir, main)\n");
-        goto end;
-    }
+    if (!BN_mod_inverse(inv, sub, params.q, ctx))
+        if (err != 1)
+        {
+            printf(" * Computation of INV #4 failed! (test_paiShamir, main)\n");
+            goto end;
+        }
     err = BN_mod_mul(mul, keys_client.pk, inv, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computationof MUL #4 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_mul(s_i[1], s_i[1], mul, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of S_I 0 #2 failed! (test_paiShamin, main)\n");
         goto end;
     }
 
-
     BN_copy(si_sum, s_i[0]);
     err = BN_mod_add(si_sum, si_sum, s_i[1], params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Addition of S_I 1 to SI_SUM failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_mul(s_i[0], e_c, s_i[0], params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Multiplication of S_I O and E_C failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_mul(s_i[1], e_c, s_i[1], params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Multiplication of S_I 1 and E_C failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_sub(s_i[0], r_i[0], s_i[0], params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of S_I 0 (sub R_I 0) failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_sub(s_i[1], r_i[1], s_i[1], params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of S_I 1 (sub R_I 1) failed! (test_paiShamir, main)\n");
         goto end;
     }
 
-
     BN_copy(sc_inter, keys_client.sk);
     err = BN_mod_sub(sub, keys_device1.pk, keys_client.pk, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of SUB #5 failed! (test_paiShamir, main)\n");
         goto end;
     }
-    if(!BN_mod_inverse(inv, sub, params.q, ctx))
+    if (!BN_mod_inverse(inv, sub, params.q, ctx))
     {
         printf(" * Computation of INV #5 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_mul(mul, keys_device1.pk, inv, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of MUL #5 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_mul(sc_inter, sc_inter, mul, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of SC_INTER #1 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_sub(sub, keys_device2.pk, keys_client.pk, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation fo SUB #6 failed! (test_paiShamir, main)\n");
         goto end;
     }
-    if(!BN_mod_inverse(inv, sub, params.q, ctx))
-    if(err != 1)
-    {
-        printf(" * Computation of INV #6 failed! (tets_paiShamir, main)\n");
-        goto end;
-    }
+    if (!BN_mod_inverse(inv, sub, params.q, ctx))
+        if (err != 1)
+        {
+            printf(" * Computation of INV #6 failed! (tets_paiShamir, main)\n");
+            goto end;
+        }
     err = BN_mod_mul(mul, keys_device2.pk, inv, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of MUL #6 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_mul(sc_inter, sc_inter, mul, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of SC_INTER #2 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_add(si_sum, si_sum, sc_inter, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of SI_SUM faild! (test_paiShamir, main)\n");
         goto end;
@@ -1273,65 +1236,64 @@ unsigned int test_paiShamir()
     printf("SI_SUM: %s\n", BN_bn2dec(si_sum));
 
     err = BN_mod_mul(s_c_mul, e_c, sc_inter, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of S_C_MUL failed! (tets_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_sub(s_c, r_c, s_c_mul, params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of S_C failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_add(s_c, s_c, s_i[0], params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of S_C #1 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_add(s_c, s_c, s_i[1], params.q, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of S_C #2 failed! (test_paiShamir, main)\n");
         goto end;
     }
 
-
     //--------------------------
     err = BN_mod_exp(tch_1, params.g, s_c, params.p, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of TCH_1 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_exp(tch_2, pk, e_c, params.p, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of TCH_2 failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_mul(t_ch, tch_1, tch_2, params.p, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of T_CH failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = BN_mod_exp(kappa_s, t_ch, r_s, params.p, ctx);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * Computation of KAPPA_S failed! (test_paiShamir, main)\n");
         goto end;
     }
     err = hash(e_c_ch, Y, t_ch, kappa_s);
-    if(err != 1)
+    if (err != 1)
     {
         printf(" * E_C_CH Hash creation failed! (test_paiShamir, main)\n");
         goto end;
     }
     int tau_s = BN_cmp(e_c, e_c_ch);
     printf("TAU_S: %d (if 0 --> OK!)\nE_C: %s\nE_C_CH: %s\n", tau_s, BN_bn2dec(e_c), BN_bn2dec(e_c_ch));
-    
+
 end:
     free_schnorr_params(&params);
     free_schnorr_keychain(&keys_server);
@@ -1375,14 +1337,14 @@ end:
     BN_free(kappa_s);
     BN_free(e_c_ch);
 
-    for(int i = 0; i < 2; i++)
+    for (int i = 0; i < 2; i++)
     {
         BN_free(r_i[i]);
         BN_free(t_i[i]);
         BN_free(kappa_i[i]);
         BN_free(s_i[i]);
     }
-    for(int i = 0; i < 3; i++)
+    for (int i = 0; i < 3; i++)
     {
         BN_free(kappa_inter[i]);
     }
@@ -1398,7 +1360,6 @@ end:
 
     return err;
 }
-
 
 /* --- RESOURCES ---
  *  https://math.stackexchange.com/questions/814879/find-a-generator-of-the-multiplicative-group-of-mathbbz-23-mathbbz-as-a-c

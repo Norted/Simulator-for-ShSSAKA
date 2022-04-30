@@ -89,7 +89,14 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
     unsigned int err = 0;
     int i = 0;
 
-    /* BIGNUM *SUM = BN_new(); */
+    // DEBUG CODE
+        BIGNUM *SK = BN_new();
+        BIGNUM *part_SK = BN_new();
+        BIGNUM *l_pk_c = BN_new();
+        unsigned int full_interpolation_list[currentNumberOfDevices];
+        unsigned int partial_interpolation_list[] = {0, 1, 2};
+        unsigned int size_part_list =  sizeof(partial_interpolation_list) / sizeof(unsigned int);
+    //
 
     BIGNUM *c = BN_new();
     BIGNUM *ci = BN_new();
@@ -105,23 +112,18 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
 
     for (i; i < currentNumberOfDevices; i++)
     {
-        /* printf("I: %d\t", i); */
-
         kappa_i[i] = BN_new();
-        err = rand_range(kappa_i[i], paikeys->pk->n);
+        err = rand_range(kappa_i[i], g_globals.params->q);
         if (err != 1)
         {
             printf(" * Failed to generate random KAPPA_i value! (paishamir, paiShamir_distribution)\n");
             goto end;
         }
 
-        /* printf("KAPPA: %s\n", BN_bn2dec(kappa_i[i]));
-        err = BN_add(SUM, kappa_i[i], SUM); */
-
         for (int j = 0; j < G_POLYDEGREE; j++)
         {
             d[i][j] = BN_new();
-            err = rand_range(d[i][j], paikeys->pk->n);
+            err = rand_range(d[i][j], g_globals.params->q);
             if (err != 1)
             {
                 printf(" * Failed to generate random D value! (paishamir, paiShamir_distribution)\n");
@@ -153,7 +155,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
             
             /* printf("|--> J: %d\t", j); */
             
-            err = paiShamir_get_ci(paikeys, kappa_i[j], d[i], g_ssaka_devicesKeys[i].keys->pk, ci);
+            err = paiShamir_get_ci(paikeys, kappa_i[j], d[j], g_ssaka_devicesKeys[i].keys->pk, ci);
             if (err != 1)
             {
                 printf(" * Failed to get %d C_i! (paishamir, paiShamir_distribution)\n", j);
@@ -173,19 +175,33 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
             goto end;
         }
         
-        /* printf("SK_%d: %s\n", i, BN_bn2dec(g_ssaka_devicesKeys[i].keys->sk)); */
+        //printf("SK_%d: %s\n", i, BN_bn2dec(g_ssaka_devicesKeys[i].keys->sk));
     
     }
-
-    /* printf("\nKappa_SUM: %s\n", BN_bn2dec(SUM));
-    err = BN_mod_exp(SUM, g_globals.params->g, SUM, g_globals.params->q, BN_CTX_secure_new());
-    printf("\nKappa_PK: %s\n\n", BN_bn2dec(SUM));  */
+    
+    // DEBUG CODE
+        for(int i = 0; i < currentNumberOfDevices; i++)
+        {
+            full_interpolation_list[i] = i;
+        }
+        
+        err = paiShamir_interpolation(full_interpolation_list, currentNumberOfDevices, SK);
+        printf(">> SK: %s\n", BN_bn2dec(SK));
+        err = paiShamir_interpolation(partial_interpolation_list, size_part_list, part_SK);
+        printf(">> part_SK: %s\n", BN_bn2dec(part_SK));
+        err = BN_mod_exp(l_pk_c, g_globals.params->g, SK, g_globals.params->q, BN_CTX_secure_new());
+        printf(">> ~ PK_C: %s\n\n", BN_bn2dec(l_pk_c));
+    //
 
 end:
     BN_free(c);
     BN_free(ci);
     BN_free(cN_prime);
-    /* BN_free(SUM); */
+    // DEBUG CODE
+        BN_free(SK);
+        BN_free(part_SK);
+        BN_free(l_pk_c);
+    //
     for (i = 0; i < currentNumberOfDevices; i++)
     {
         BN_free(kappa_i[i]);
@@ -235,7 +251,7 @@ unsigned int paiShamir_get_ci(struct paillier_Keychain *paikeys, BIGNUM *kappa_i
     {
         BN_dec2bn(&zero1, "0");
         BN_dec2bn(&zero2, "0");
-        polynom[i] = BN_new();  // SIGSEGV TILL THIS BREAK POINT (INCLUDED)
+        polynom[i] = BN_new();
 
         err = paillier_encrypt(paikeys->pk, d[i - 1], polynom[i], zero1, zero2);
         if (err != 1)
@@ -312,7 +328,7 @@ unsigned int paiShamir_get_share(struct paillier_Keychain *paikeys, BIGNUM *cN_p
         printf(" * Failed do decrypt the share! (paishamir, paiShamir_get_share)\n");
         goto end;
     }
-    //printf("** SHARE: %s\n", BN_bn2dec(share));
+    //printf(">> SHARE: %s\n", BN_bn2dec(share));
 
 end:
     BN_free(enc);
