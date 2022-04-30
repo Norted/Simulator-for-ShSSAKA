@@ -40,8 +40,16 @@ unsigned int _shamir_distribution(unsigned char *secret) {
 unsigned int paiShamir_distribution(struct paillierKeychain *paikeys) {
     unsigned int err = 0;
 
-    //unsigned char SUM[BUFFER];
-    //strcpy(SUM, "0");
+
+    unsigned char SUM[BUFFER];
+    strcpy(SUM, "0");
+    unsigned int interpolation_list[currentNumberOfDevices];
+    for (int i = 0; i < currentNumberOfDevices; i++) {
+        interpolation_list[i] = i;
+    }
+    unsigned int part_interpolation_list[] = {0, 1, 2};
+    unsigned int size = sizeof(part_interpolation_list) / sizeof(unsigned int);
+
 
     unsigned char c[BUFFER];
     unsigned char ci[BUFFER];
@@ -71,12 +79,22 @@ unsigned int paiShamir_distribution(struct paillierKeychain *paikeys) {
             err += paiShamir_get_cN_prime(paikeys, cN_prime, ci, cN_prime);
         }
         err += paiShamir_get_share(paikeys, cN_prime, c, g_ssaka_devicesKeys[i].keys->sk);
+
+        //err += bn_add(SUM, g_ssaka_devicesKeys[i].keys->sk, SUM);
         //printf("SK_%d: %s\n", i, g_ssaka_devicesKeys[i].keys->sk);
     }
 
-    //printf("\nKappa_SUM: %s\n\n", SUM);
-    //err += bn_modexp(g_globals.params->g,SUM,g_globals.params->q,SUM);
-    //printf("\nKappa_PK: %s\n\n", SUM);
+    printf("\n~~~ DEBUG TEST ~~~\n");
+    err += paiShamir_interpolation(interpolation_list, currentNumberOfDevices, SUM);
+    printf("SK_SUM: %s\n", SUM);
+    err += bn_modexp(g_globals.params->g,SUM,g_globals.params->p,SUM);
+    printf("~ PK: %s\n\n", SUM);
+    
+    err += paiShamir_interpolation(part_interpolation_list, size, SUM);
+    printf("INTER_SK: %s\n", SUM);
+    err += bn_modexp(g_globals.params->g,SUM,g_globals.params->p,SUM);
+    printf("~ PK: %s\n", SUM);
+    printf("~~~~~~~~~~~~~~~~~~\n\n");
 
     if(err != (currentNumberOfDevices) * (4 + 2*(currentNumberOfDevices-2) + G_POLYDEGREE))
         return 0;

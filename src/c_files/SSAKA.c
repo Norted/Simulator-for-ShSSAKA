@@ -359,7 +359,7 @@ unsigned int _get_pk_c() {
     err += paiShamir_interpolation(interpolation_list, currentNumberOfDevices, pk_c);
     err += bn_modexp(g_globals.params->g, pk_c, g_globals.params->p, pk_c);
     
-    //printf("PK: %s\n", pk_c);
+    printf("PK: %s\n", pk_c);
 
     if(err != 2)
         return 0;

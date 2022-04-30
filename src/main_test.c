@@ -37,7 +37,7 @@ int main() {
         printf("ERR:\t%d\nTAU:\t%s\n", err, server.tau_s);
     */
 
-    /*  SSAKA test  
+    /*  SSAKA test  */
         g_globals.params = malloc(sizeof(struct SchnorrParams));
         gen_schnorr_params(g_globals.params);
         g_globals.idCounter = 1;
@@ -70,12 +70,13 @@ int main() {
                 printf("--- DEVICE %d ---\n", j);
                 _ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
             }
-        /
+        */
 
         err += ssaka_akaServerSignVerify(&list_of_used_devs, size_used, Y, &server);
-        //err += ssaka_akaServerSignVerify(&list_of_all_devs, size_all, Y, &server); 
-        printf("ERR:\t%d\nTAU:\t%s\n", err, server.tau_s);
-    */
+        printf("ERR:\t%d\n1. TAU:\t%s\n", err, server.tau_s);
+        err += ssaka_akaServerSignVerify(&list_of_all_devs, size_all, Y, &server); 
+        printf("ERR:\t%d\n1. TAU:\t%s\n", err, server.tau_s);
+    //*/
     
     /*  Paillier-Shamir test    
         struct paillierKeychain paikeys;
