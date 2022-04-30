@@ -138,6 +138,7 @@ unsigned int schnorr_verify(struct schnorr_Params *params, BIGNUM *pk, BIGNUM *m
         goto end;
     }
 
+    printf(">> (s_sig) kappa 0?: %s\n", BN_bn2dec(kappa));
     if (BN_is_zero(kappa) != 1)
     {
         err = BN_mod_exp(kappa, signature->c_prime, signature->r, params->p, ctx);
@@ -155,7 +156,7 @@ unsigned int schnorr_verify(struct schnorr_Params *params, BIGNUM *pk, BIGNUM *m
         goto end;
     }
 
-    printf(">> S_H: %s\n>> H_P: %s\n", BN_bn2dec(signature->hash),BN_bn2dec(hash_prime));
+    printf(">> S_H: %s\n>> H_P: %s\n", BN_bn2dec(signature->hash), BN_bn2dec(hash_prime));
 
     if(BN_cmp(signature->hash, hash_prime) != 0)
     {

@@ -313,6 +313,12 @@ unsigned int generate_rnd_paillier(BIGNUM *range, BIGNUM *gcd_chck, BIGNUM *rand
             printf(" * Generation of a random failed! (generate_rnd_paillier, support_functions)\n");
             goto end;
         }
+        err = BN_mod(random, random, gcd_chck, ctx);
+        if (err != 1)
+        {
+            printf(" * Modulo operation failed! (generate_rnd_paillier, support_functions)\n");
+            goto end;
+        }
         err = BN_gcd(tmp_gcd, random, gcd_chck, ctx);
         if (err != 1)
         {
@@ -348,6 +354,8 @@ unsigned int hash(BIGNUM *res, BIGNUM *Y, BIGNUM *t_s, BIGNUM *kappa)
 
     strcat(inbuf, BN_bn2dec(Y));
     strcat(inbuf, BN_bn2dec(t_s));
+
+    printf(">> (hash) kappa 0?: %s\n", BN_bn2dec(kappa));
     if (BN_is_zero(kappa) != 1)
         strcat(inbuf, BN_bn2dec(kappa));
 

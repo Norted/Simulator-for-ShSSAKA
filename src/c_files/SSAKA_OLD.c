@@ -248,6 +248,7 @@ unsigned int ssaka_akaServerSignVerify(unsigned int *list_of_used_devs, unsigned
     printf(" <<< CLIENT PROOF >>>\n");
     BN_dec2bn(&server->kappa, "1");
     BN_copy(client.signature->r, signature.r);
+    //printf(">> PK_C check: %s\n", BN_bn2dec(pk_c));
     sprintf(ver, "%d", schnorr_verify(g_globals.params, pk_c, Y, server->kappa, client.signature));
     BN_dec2bn(&server->tau_s, ver);
 
@@ -299,6 +300,7 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
 
     sprintf(ver, "%d", schnorr_verify(g_globals.params, g_serverKeys.keys->pk, Y, zero, server_signature));
     BN_dec2bn(&client->tau_c, ver);
+    printf(">> zero?: %s\n", BN_bn2dec(zero));
 
     if (BN_is_zero(client->tau_c) == 1)
     {
@@ -361,6 +363,7 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
         printf(" * Computation of client KAPPA failed! (SSAKA, ssaka_clientProofVerify)\n");
         goto end;
     }
+    
 
     for (i = 0; i < size; i++)
     {
@@ -378,6 +381,7 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
         }
     }
 
+    printf(">> NEXT HASH NOT 0!\n");
     err = hash(client->signature->hash, Y, t, client->kappa); // e_c
     if (err != 1)
     {
@@ -511,7 +515,7 @@ unsigned int _get_pk_c()
         printf(">> INTER_OUT: %s\n", BN_bn2dec(pk_c));
     //
 
-    err = BN_mod_exp(pk_c, g_globals.params->g, pk_c, g_globals.params->q, ctx); // ->p
+    err = BN_mod_exp(pk_c, g_globals.params->g, pk_c, g_globals.params->p, ctx); // ->p
     if (err != 1)
     {
         printf(" * Computation of PK failed! (SSAKA, _get_pk_c)\n");

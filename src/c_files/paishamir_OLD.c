@@ -43,7 +43,7 @@ unsigned int _shamir_distribution(BIGNUM *secret)
 
             sprintf(str_exp, "%d", exp);
             BN_dec2bn(&tmp_exp, str_exp);
-            err = BN_mod_exp(xs[exp], g_ssaka_devicesKeys[i].keys->pk, tmp_exp, g_globals.params->q, ctx);
+            err = BN_mod_exp(xs[exp], g_ssaka_devicesKeys[i].keys->pk, tmp_exp, g_globals.params->p, ctx);
             if (err != 1)
             {
                 printf(" * Exponentation failed at EXP = %d! (paishamir, _shamir_distribution)\n", exp);
@@ -54,13 +54,13 @@ unsigned int _shamir_distribution(BIGNUM *secret)
 
         for (int j = 0; j <= G_POLYDEGREE; j++)
         {
-            err = BN_mod_mul(ci_tmp, polynom[j], xs[j], g_globals.params->q, ctx);
+            err = BN_mod_mul(ci_tmp, polynom[j], xs[j], g_globals.params->p, ctx);
             if (err != 1)
             {
                 printf(" * Modular multipliaction of polynom with share failed! (paishamir, _shamir_distribution)\n");
                 goto end;
             }
-            err = BN_mod_add(sum, sum, ci_tmp, g_globals.params->q, ctx);
+            err = BN_mod_add(sum, sum, ci_tmp, g_globals.params->p, ctx);
             if (err != 1)
             {
                 printf(" * Modular addition of share failed! (paishamir, _shamir_distribution)\n");
@@ -90,12 +90,17 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
     int i = 0;
 
     // DEBUG CODE
+        BN_CTX *ctx = BN_CTX_secure_new();
         BIGNUM *SK = BN_new();
         BIGNUM *part_SK = BN_new();
         BIGNUM *l_pk_c = BN_new();
         unsigned int full_interpolation_list[currentNumberOfDevices];
+        for(i; i < currentNumberOfDevices; i++)
+        {
+            full_interpolation_list[i] = i;
+        }
         unsigned int partial_interpolation_list[] = {0, 1, 2};
-        unsigned int size_part_list =  sizeof(partial_interpolation_list) / sizeof(unsigned int);
+        unsigned int size_part_list = sizeof(partial_interpolation_list) / sizeof(unsigned int);
     //
 
     BIGNUM *c = BN_new();
@@ -103,17 +108,11 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
     BIGNUM *cN_prime = BN_new();
     BIGNUM *kappa_i[currentNumberOfDevices];
     BIGNUM *d[currentNumberOfDevices][G_POLYDEGREE];
-    BN_CTX *ctx = BN_CTX_secure_new();
-    if (!ctx)
-    {
-        printf(" * Failed to generate CTX! (paishamir, paiShamir_distribution)\n");
-        goto end;
-    }
 
-    for (i; i < currentNumberOfDevices; i++)
+    for (i = 0; i < currentNumberOfDevices; i++)
     {
         kappa_i[i] = BN_new();
-        err = rand_range(kappa_i[i], g_globals.params->q);
+        err = rand_range(kappa_i[i], paikeys->pk->n); // ->q
         if (err != 1)
         {
             printf(" * Failed to generate random KAPPA_i value! (paishamir, paiShamir_distribution)\n");
@@ -123,7 +122,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
         for (int j = 0; j < G_POLYDEGREE; j++)
         {
             d[i][j] = BN_new();
-            err = rand_range(d[i][j], g_globals.params->q);
+            err = rand_range(d[i][j], paikeys->pk->n); // ->q
             if (err != 1)
             {
                 printf(" * Failed to generate random D value! (paishamir, paiShamir_distribution)\n");
@@ -176,21 +175,20 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
         }
         
         //printf("SK_%d: %s\n", i, BN_bn2dec(g_ssaka_devicesKeys[i].keys->sk));
-    
     }
     
     // DEBUG CODE
-        for(int i = 0; i < currentNumberOfDevices; i++)
-        {
-            full_interpolation_list[i] = i;
-        }
-        
+        printf("\n~~~ PaiShamir DEBUG ~~~\n");
         err = paiShamir_interpolation(full_interpolation_list, currentNumberOfDevices, SK);
         printf(">> SK: %s\n", BN_bn2dec(SK));
+        err = BN_mod_exp(l_pk_c, g_globals.params->g, SK, g_globals.params->p, ctx);
+        printf(">> ~ PK_C: %s\n", BN_bn2dec(l_pk_c));
+
         err = paiShamir_interpolation(partial_interpolation_list, size_part_list, part_SK);
         printf(">> part_SK: %s\n", BN_bn2dec(part_SK));
-        err = BN_mod_exp(l_pk_c, g_globals.params->g, SK, g_globals.params->q, BN_CTX_secure_new());
-        printf(">> ~ PK_C: %s\n\n", BN_bn2dec(l_pk_c));
+        err = BN_mod_exp(l_pk_c, g_globals.params->g, part_SK, g_globals.params->p, ctx);
+        printf(">> ~ PK_C: %s\n", BN_bn2dec(l_pk_c));
+        printf("~~~~~~~~~~~~~~~~~~~~~~~\n\n");
     //
 
 end:
@@ -201,6 +199,7 @@ end:
         BN_free(SK);
         BN_free(part_SK);
         BN_free(l_pk_c);
+        BN_CTX_free(ctx);
     //
     for (i = 0; i < currentNumberOfDevices; i++)
     {
@@ -210,7 +209,6 @@ end:
             BN_free(d[i][j]);
         }
     }
-    BN_CTX_free(ctx);
 
     return err;
 }
@@ -362,7 +360,7 @@ unsigned int paiShamir_interpolation(unsigned int *devices_list, unsigned int si
             printf(" * Part %d of the interpolation failed! (paishamir, paiShamir_interpolation)\n", i);
             goto end;
         }
-        err = BN_mod_add(secret, secret, sk_i, g_globals.params->q, ctx);
+        err = BN_mod_add(secret, secret, sk_i, g_globals.params->p, ctx);
         if (err != 1)
         {
             printf(" * Addition of the secret failed! (paishamir, paiShamir_interpolation)\n");
@@ -397,24 +395,24 @@ unsigned int part_interpolation(unsigned int *devices_list, unsigned int size_of
         {
             continue;
         }
-        err = BN_mod_sub(sub, g_ssaka_devicesKeys[devices_list[i]].keys->pk, g_ssaka_devicesKeys[devices_list[current_device]].keys->pk, g_globals.params->q, ctx);
+        err = BN_mod_sub(sub, g_ssaka_devicesKeys[devices_list[i]].keys->pk, g_ssaka_devicesKeys[devices_list[current_device]].keys->pk, g_globals.params->p, ctx);
         if(err != 1)
         {
             printf(" * Failed to compute the residuo of the PKs (#%d)! (paishamir, part_interpolation)\n", i);
             goto end;
         }        
-        if(!BN_mod_inverse(inv, sub, g_globals.params->q, ctx))
+        if(!BN_mod_inverse(inv, sub, g_globals.params->p, ctx))
         {
             printf(" * Failed to compute the inverse (#%d)! (paishamir, part_interpolation)\n", i);
             goto end;
         }
-        err = BN_mod_mul(tmp_mul, g_ssaka_devicesKeys[devices_list[i]].keys->pk, inv, g_globals.params->q, ctx);
+        err = BN_mod_mul(tmp_mul, g_ssaka_devicesKeys[devices_list[i]].keys->pk, inv, g_globals.params->p, ctx);
         if(err != 1)
         {
             printf(" * Failed to multiply inverse with the PK (#%d)! (paishamir, part_interpolation)\n", i);
             goto end;
         }
-        err = BN_mod_mul(sk_i, sk_i, tmp_mul, g_globals.params->q, ctx);
+        err = BN_mod_mul(sk_i, sk_i, tmp_mul, g_globals.params->p, ctx);
         if(err != 1)
         {
             printf(" * Failed to compute the SK_i #%d! (paishamir, part_interpolation)\n", i);
