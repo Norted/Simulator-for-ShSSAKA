@@ -46,11 +46,11 @@ unsigned int ssaka_setup() {
     err += _get_pk_c();
 
     printf("--- CLIENT ---\n");
-    _ssaka_keyPrinter(&g_ssaka_devicesKeys[0]);
+    ssaka_keyPrinter(&g_ssaka_devicesKeys[0]);
     
     for (int j = 1; j < currentNumberOfDevices; j++) {
         printf("--- DEVICE %d ---\n", j);
-        _ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
+        ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
     }
 
     if(err != 4 + currentNumberOfDevices)
@@ -150,28 +150,6 @@ unsigned int ssaka_akaServerSignVerify(unsigned int list_of_used_devs[], unsigne
     }
 
     err += schnorr_sign(g_globals.params, g_ssaka_serverKeys.keys->sk, Y, "0", &signature);
-    /*
-    unsigned char r_s[BUFFER];
-    unsigned char t_s[BUFFER];
-
-    unsigned char *rnd = malloc(sizeof(unsigned int));
-    err += random_str_num_in_range(rnd, G_MAXRANDOMNUMBER, G_MINRANDOMNUMBER);
-    err += bn_mod(rnd, g_globals.g_q, r_s);
-    err += bn_modexp(g_globals.g_g, r_s, g_globals.g_q, t_s);  //t_s 
-
-    free(rnd);
-
-    unsigned char e_s[BUFFER];
-    unsigned char s_s[BUFFER];
-    err += hash(e_s, Y, t_s, "0");
-    
-    unsigned char mul[BUFFER];
-    err += bn_hashmul(e_s, sk_s, mul);
-    unsigned char sub[BUFFER];
-    err += bn_sub("0", mul, mul);
-    err += bn_add(r_s, mul, sub);
-    err += bn_mod(sub, g_globals.g_q, s_s);
-    */
 
     /*  
      *  Server  →   (Y, sigma)      →   Client
@@ -190,32 +168,6 @@ unsigned int ssaka_akaServerSignVerify(unsigned int list_of_used_devs[], unsigne
     unsigned char ver[BUFFER];
     sprintf(ver, "%d", schnorr_verify(g_globals.params, pk_c, Y, server->kappa, client.signature));
     strcpy(server->tau_s, ver);
-
-    /*
-        err += ssaka_clientProofVerify(list_of_used_devs, size, Y, e_s, s_s, &g_ssaka_serverKeys.pk, &g_ssaka_devicesKeys[0].sk, &client);
-        if(strcmp(client.tau_c, "0") == 0) {
-            strcpy(server->tau_s, "0");
-            return 0;
-        }
-
-        unsigned char t_chck_1[BUFFER];
-        err += bn_modexp(g_globals.g_g, client.pi[1], g_globals.g_q, t_chck_1);
-        unsigned char t_chck_2[BIG_BUFFER];
-        err += bn_hashexp(pk_c, client.pi[0], g_globals.g_q, t_chck_2);
-        unsigned char t_chck[BIG_BUFFER];
-        err += bn_modmul(t_chck_1, t_chck_2, g_globals.g_q, t_chck);
-        err += bn_modexp(t_chck, r_s, g_globals.g_q, server->kappa);
-        
-        unsigned char digest[BUFFER];
-        err += hash(digest, Y, t_chck, server->kappa);
-
-        if (strcmp(client.pi[0], digest) == 0) {
-            strcpy(server->tau_s, "1");
-        }
-        else {
-            strcpy(server->tau_s, "0");
-        }
-    */
 
     if(strcmp(server->kappa, client.kappa) == 0)
         printf(":)\n");
@@ -236,26 +188,6 @@ unsigned int ssaka_clientProofVerify(unsigned int list_of_used_devs[], unsigned 
     if (strcmp(client->tau_c, "0") == 0) {
         return 0;
     }
-
-    /*
-        unsigned char pow_1[BUFFER];
-        err += bn_modexp(g_globals.g_g, s_s, g_globals.g_q, pow_1);
-        unsigned char pow_2[BUFFER];
-        err += bn_modexp(pk_s, e_s, g_globals.g_q, pow_2);
-        unsigned char t_s_chck[BUFFER];
-        err += bn_modmul(pow_1, pow_2, g_globals.g_q, t_s_chck);
-        
-        unsigned char digest[BUFFER];
-        err += hash(digest, Y, t_s_chck, "0");
-
-        if (bn_cmp(e_s, digest) == 0) {
-            strcpy(client->tau_c, "1");
-        }
-        else {
-            strcpy(client->tau_c, "0");
-            return 0;
-        }
-    */
 
     /*  t_s_chck, sk_i  →   SSAKA-DEVICE-PROOFVERIFY(t_s_chck, sk_i)
      *
@@ -342,7 +274,7 @@ unsigned int ssaka_clientProofVerify(unsigned int list_of_used_devs[], unsigned 
 /*  Support function definition
  *  print to console the keychain variables
  */
-void _ssaka_keyPrinter(struct ssaka_Keychain *key) {
+void ssaka_keyPrinter(struct ssaka_Keychain *key) {
     printf("ID: %s\n", key->ID);
     printf("PK: %s\n", key->keys->pk);
     printf("SK: %s\n", key->keys->sk);
@@ -359,7 +291,7 @@ unsigned int _get_pk_c() {
     err += paiShamir_interpolation(interpolation_list, currentNumberOfDevices, pk_c);
     err += bn_modexp(g_globals.params->g, pk_c, g_globals.params->p, pk_c);
     
-    printf("PK: %s\n", pk_c);
+    /* printf("PK: %s\n", pk_c); */
 
     if(err != 2)
         return 0;

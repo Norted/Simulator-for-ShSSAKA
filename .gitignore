@@ -1,7 +1,5 @@
 # libraries folder
-wolfssl/
 openssl/
-libpolynomial/
 
 # binary files
 GUI
@@ -14,6 +12,7 @@ AKA
 paramgen
 openssl_bn
 schnorrs_signature
+database_cjson
 
 # Prerequisites
 *.d

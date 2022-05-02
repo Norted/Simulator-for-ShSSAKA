@@ -1,7 +1,6 @@
-//#include <AKA.h>
-#include <SSAKA.h>
 #include <gtk/gtk.h>
 #include <globals.h>
+#include <SSAKA.h>
 
 struct Buttons {
   GtkWidget *button_keys;

@@ -2,18 +2,32 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <unistd.h>
 // local headers
-//#include <paramgen.h>
-#include <schnorrs_signature.h>
-#include <paillier.h>
-#include <paishamir.h>
 #include <SSAKA.h>
 #include <AKA.h>
-
+#include <paillier.h>
+#include <paishamir.h>
+#include <schnorrs_signature.h>
+#include <cjson/cJSON.h>
+#include <database_cjson.h>
+#include <globals.h>
 
 struct globals g_globals;
+pthread_t threads[NUM_THREADS];
+struct paillierKeychain p_keyring;
+
+const char *restrict file_keys = "../precomputed_values/saved_paillier_keys.json";
+const char *restrict file_precomputed_noise = "../precomputed_values/precomputation_noise.json";
+const char *restrict file_precomputed_message = "../precomputed_values/precomputation_message.json";
+
+
+// desperate functions
+void *thread_creation(void *threadid);
+unsigned int threaded_precomputation();
 unsigned int test(struct aka_Keychain *server_keys, unsigned char *r_s, unsigned char *Y);
 unsigned int test_2(unsigned char *Y);
+
 
 int main() {
     unsigned char *Y = "100";
@@ -22,12 +36,12 @@ int main() {
 
     //err = test_2(Y);
     
-    /*  AKA-SETUP and AKA-CLIENT-REGISTER   
+    /*  AKA-SETUP and AKA-CLIENT-REGISTER   *
      *      1) randomly initialize generator from GENERATORS
      *      2) generate keys for devices, client and server side
      */
 
-    /*  AKA test    
+    /*  AKA test    *
         g_globals.params = malloc(sizeof(struct SchnorrParams));
         gen_schnorr_params(g_globals.params);
         g_globals.idCounter = 1;
@@ -35,9 +49,9 @@ int main() {
         err += aka_setup();
         err += aka_serverSignVerify(Y, &server);
         printf("ERR:\t%d\nTAU:\t%s\n", err, server.tau_s);
-    */
+    //*/
 
-    /*  SSAKA test  */
+    /*  SSAKA test  *
         g_globals.params = malloc(sizeof(struct SchnorrParams));
         gen_schnorr_params(g_globals.params);
         g_globals.idCounter = 1;
@@ -70,15 +84,15 @@ int main() {
                 printf("--- DEVICE %d ---\n", j);
                 _ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
             }
-        */
+        /
 
-        err += ssaka_akaServerSignVerify(&list_of_used_devs, size_used, Y, &server);
+        err += ssaka_akaServerSignVerify(list_of_used_devs, size_used, Y, &server);
         printf("ERR:\t%d\n1. TAU:\t%s\n", err, server.tau_s);
-        err += ssaka_akaServerSignVerify(&list_of_all_devs, size_all, Y, &server); 
+        err += ssaka_akaServerSignVerify(list_of_all_devs, size_all, Y, &server); 
         printf("ERR:\t%d\n1. TAU:\t%s\n", err, server.tau_s);
     //*/
     
-    /*  Paillier-Shamir test    
+    /*  Paillier-Shamir test    *
         struct paillierKeychain paikeys;
         err += generate_keypair(&paikeys);
         
@@ -97,14 +111,14 @@ int main() {
         }
         unsigned int size_all = sizeof(list_of_all_devs)/sizeof(unsigned int);
 
-        //unsigned char *secret = "1234";
-        //err += shamir_distribution(secret);
+        unsigned char *secret = "1234";
+        //err += _shamir_distribution(secret);
         err += paiShamir_distribution(&paikeys);
 
         printf("\n---DEVICES---\n");
         for (int i = 0; i < currentNumberOfDevices; i++) {
             printf("\n- DEVICE %d -\n", i);
-            _ssaka_keyPrinter(&g_ssaka_devicesKeys[i]);
+            ssaka_keyPrinter(&g_ssaka_devicesKeys[i]);
         }
         printf("\n");
 
@@ -116,9 +130,9 @@ int main() {
        
         printf("\nCHCK: %s\n", secret_chck);
         printf("\nMAIN-ERR: %d\n", err);
-    */
+    //*/
 
-    /*   SCHNORR test  
+    /*  SCHNORR test  *
         int stop = 0;
         struct SchnorrParams params = {{""}};
         struct SchnorrKeychain keys_s = {{""}};
@@ -175,32 +189,135 @@ int main() {
             }
             stop ++;
         }
-    */
+    //*/
 
-    /*  My PAILLIER test    
+    /*  PAILLIER test   * 
         printf("\n\n---PAILLIER test---\n");
-        struct paillierKeychain p_keyring = {{""}};
         err += generate_keypair(&p_keyring);
+
+        if (access(file_keys, F_OK))
+        {
+            err = save_keys(file_keys, &p_keyring);
+            if(err != 0)
+                printf(" * Save Keychain failed!\n");
+        }
+        else
+            read_keys(file_keys, &p_keyring);
+        
+        if (access(file_precomputed_noise, F_OK) || access(file_precomputed_message, F_OK))
+        {
+            threaded_precomputation();
+            for (int i = 0; i < NUM_THREADS; i++)
+                pthread_join(threads[i], NULL);
+        }
+
+        cJSON *json_noise = cJSON_CreateObject();
+        json_noise = parse_JSON(file_precomputed_noise);
+        cJSON *json_message = cJSON_CreateObject();
+        json_message = parse_JSON(file_precomputed_message);
 
         printf("ERR: %u\nKEYS:\n|--> L: %s\n|--> M: %s\n|--> N: %s\n|--> N_SQ: %s\n|--> G: %s\n", err, p_keyring.sk.l,
             p_keyring.sk.m, p_keyring.pk.n, p_keyring.pk.n_sq, p_keyring.pk.g);
         
-        unsigned char *secret = "125";
+        unsigned char *secret = "42";
         printf("SECRET: %s\n", secret);
+
+        unsigned char rnd[BUFFER];
         unsigned char enc[BUFFER];
-        err += encrypt(p_keyring.pk, secret, enc);
-        printf("ENC: %s\n", enc);
         unsigned char dec[BUFFER];
+        unsigned char precomp_message[BUFFER];
+        unsigned char precomp_noise[BUFFER];
+
+        err += find_value(json_message, secret, precomp_message);
+        err += random_str_num_in_range(rnd, 99, 1);
+        err += find_value(json_noise, rnd, precomp_noise);
+
+        printf("\nP_M: %s\nP_N: %s\n", precomp_message, precomp_noise);
+        
+        printf("\nNO PRECOMPUTATION:\n");
+        err += encrypt(p_keyring.pk, secret, enc, "0", "0");
+        printf("ENC: %s\n", enc);
+        err += decrypt(&p_keyring, enc, dec);
+        printf("DEC: %s\n", dec);
+
+        printf("\nMESSAGE PRECOMPUTATION:\n");
+        err += encrypt(p_keyring.pk, secret, enc, precomp_message, "0");
+        printf("ENC: %s\n", enc);
+        err += decrypt(&p_keyring, enc, dec);
+        printf("DEC: %s\n", dec);
+
+        printf("\nNOISE PRECOMPUTATION:\n");
+        err += encrypt(p_keyring.pk, secret, enc, "0", precomp_noise);
+        printf("ENC: %s\n", enc);
+        err += decrypt(&p_keyring, enc, dec);
+        printf("DEC: %s\n", dec);
+
+        printf("\nBOTH PRECOMPUTATION:\n");
+        err += encrypt(p_keyring.pk, secret, enc, precomp_message, precomp_noise);
+        printf("ENC: %s\n", enc);
         err += decrypt(&p_keyring, enc, dec);
         printf("DEC: %s\n", dec);
 
         printf("\n---HOMOMORPHIC TEST---\n");
         err += test_homomorphic();
 
-        printf("\n\nERR: %u (?= 4)\n", err);
-    */
+        printf("\n\nERR: %u (?= 10)\n", err);
 
-    /*  test of HASH    
+        cJSON_free(json_noise);
+        cJSON_free(json_message);
+    //*/
+
+    /*  PRECOMPUTATION test *
+    cJSON *json_noise = cJSON_CreateObject();
+    cJSON *json_message = cJSON_CreateObject();
+
+    //printf("\nRANGE: %d\nPAIKEYS:\n|--> PK:\n\t\\--> G: %s\n\t\\--> N: %s\n\t\\--> N_SQ: %s\n|-->SK:\n\t\\--> L: %s\n\t\\--> M: %s\n",
+    //        RANGE, p_keyring.pk.g, p_keyring.pk.n, p_keyring.pk.n_sq, p_keyring.sk.l, p_keyring.sk.m);
+    
+    if (access(file_keys, F_OK))
+    {
+        err = generate_keypair(&p_keyring);
+        err = save_keys(file_keys, &p_keyring);
+        if(err != 0)
+        {
+            printf(" * Save Keychain failed!\n");
+        }
+    }
+    else
+    {
+        read_keys(file_keys, &p_keyring);
+    }
+    
+    if (access(file_precomputed_noise, F_OK) || access(file_precomputed_message, F_OK))
+    {
+        threaded_precomputation();
+        for (int i = 0; i < NUM_THREADS; i++)
+        {
+            pthread_join(threads[i], NULL);
+        }
+    }
+    
+    unsigned char *message = "12";
+    unsigned char result[BUFFER];
+    json_noise = parse_JSON(file_precomputed_noise);
+    err = find_value(json_noise, message, result);
+    if (err != 1)
+    {
+        printf(" * Find value test failed!\n");
+        return 0;
+    }
+    else
+        printf("FOUND!\n|---> SECRET: %s\n|---> RESULT: %s\n", message, result);
+
+    json_message = parse_JSON(file_precomputed_message);
+   
+
+    cJSON_free(json_noise);
+    cJSON_free(json_message);
+
+    //*/
+
+    /*  test of HASH    *
         unsigned char res[BUFFER];
         unsigned char t_s[BUFFER];
         for (int i = 1; i <= 20; i++) {
@@ -208,9 +325,9 @@ int main() {
             sprintf(t_s, "%d", i);
             printf("I: %d\tHASH: %s\n", i, res);
         }
-    */
+    //*/
     
-    /*  test BN_LIB 
+    /*  test BN_LIB *
         unsigned char *a = "21";
         unsigned char *b = "42";
         unsigned char *mod = "9";
@@ -228,8 +345,6 @@ int main() {
         printf("MUL: %s, %u\n", res, err);
         err = bn_div(a, b, res, rem);
         printf("DIV: %s, %s, %u\n", res, rem, err);
-        err = bn_exp(base, exp, res);
-        printf("EXP: %s, %u\n", res, err);
         err = bn_mod(a, mod, res);
         printf("MOD: %s, %u\n", res, err);
         err = bn_modadd(a, b, mod, res);
@@ -240,13 +355,13 @@ int main() {
         printf("MODEXP: %s, %u\n", res, err);
         err = bn_gcd(a, b, res);
         printf("GCD: %s, %u\n", res, err);
-    */
+    //*/
 
     //free_aka_mem();
     //free_ssaka_mem();
     //free_schnorr_mem();
 
-    /*  ultimately desperate test of tests v1    
+    /*  ultimately desperate test of tests v1    *
         
         unsigned char g[BUFFER];
         unsigned char p[BUFFER];
@@ -283,12 +398,62 @@ int main() {
             printf("============================================\n");
             printf("============================================\n");
         //}
-    */
+    //*/
 
     return 0;
 }
 
-/*
+
+void *thread_creation(void *threadid)
+{ // precomputation type: 0 ... noise, 1 ... message
+    unsigned int err = 0;
+    long tid;
+    tid = (long)threadid;
+
+    if (tid == 0)
+    {
+        err = precomputation(file_precomputed_noise, &p_keyring, RANGE, 0);
+        if (err != 0)
+        {
+            printf(" * Noise precomputation failed!\n");
+            pthread_exit(NULL);
+        }
+    }
+    else if (tid == 1)
+    {
+        err = precomputation(file_precomputed_message, &p_keyring, RANGE, 1);
+        if (err != 0)
+        {
+            printf(" * Message precomputation failed!\n");
+            pthread_exit(NULL);
+        }
+    }
+    else
+    {
+        printf(" * No other thread needed! (thread no. %ld)\n", tid);
+    }
+    pthread_exit(NULL);
+}
+
+unsigned int threaded_precomputation()
+{
+    int rc;
+    for (int i = 0; i < NUM_THREADS; i++)
+    {
+        printf("  main() : Creating thread, %d\n", i);
+        rc = pthread_create(&threads[i], NULL, thread_creation, (void *)i);
+        if (rc)
+        {
+            printf("  Error : Unable to create thread, %d\n", rc);
+            exit(-1);
+        }
+    }
+    //pthread_exit(NULL);
+
+    return 0;
+}
+
+/*  ultimately desperate test of tests v1   *
     unsigned int test(struct aka_Keychain *server_keys, unsigned char *r_s, unsigned char *Y) {
         unsigned int err = 0;
         unsigned char t_s[BUFFER];
@@ -353,9 +518,9 @@ int main() {
         
         return set;
     }
-*/
+//*/
 
-/*
+/*  ultimately desperate test v2    *
 unsigned int test_2(unsigned char *Y) {
     struct SchnorrParams params = {{""}};
     struct SchnorrKeychain keys_server = {{""}};
@@ -553,13 +718,10 @@ unsigned int test_2(unsigned char *Y) {
 
     return err;
 }
-*/
+//*/
 
 /* --- RESOURCES ---
  *  https://math.stackexchange.com/questions/814879/find-a-generator-of-the-multiplicative-group-of-mathbbz-23-mathbbz-as-a-c
  *  https://stackoverflow.com/questions/23360728/how-to-generate-a-number-of-n-bit-in-length
  *  https://stackoverflow.com/questions/2844/how-do-you-format-an-unsigned-long-long-int-using-printf
- *  
- *  ~~~ WOLFSSL ~~~
- *  https://www.wolfssl.com/
  */

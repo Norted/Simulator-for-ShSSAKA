@@ -3,17 +3,7 @@
 
 // extern headers
 #include <globals.h>
-
-
-// structures definition
-struct aka_Keychain {
-    struct SchnorrKeychain *keys;
-    unsigned char ID[BUFFER];
-};
-
-extern struct aka_Keychain g_aka_serverKeys;
-extern struct aka_Keychain g_aka_clientKeys;
-
+#include <schnorrs_signature.h>
 
 // int SETUP (int kappa);
 // int CLIENT_REGISTER (int kappa);

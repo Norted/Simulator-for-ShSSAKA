@@ -41,14 +41,14 @@ unsigned int paiShamir_distribution(struct paillierKeychain *paikeys) {
     unsigned int err = 0;
 
 
-    unsigned char SUM[BUFFER];
+    /* unsigned char SUM[BUFFER];
     strcpy(SUM, "0");
     unsigned int interpolation_list[currentNumberOfDevices];
     for (int i = 0; i < currentNumberOfDevices; i++) {
         interpolation_list[i] = i;
     }
     unsigned int part_interpolation_list[] = {0, 1, 2};
-    unsigned int size = sizeof(part_interpolation_list) / sizeof(unsigned int);
+    unsigned int size = sizeof(part_interpolation_list) / sizeof(unsigned int); */
 
 
     unsigned char c[BUFFER];
@@ -84,7 +84,7 @@ unsigned int paiShamir_distribution(struct paillierKeychain *paikeys) {
         //printf("SK_%d: %s\n", i, g_ssaka_devicesKeys[i].keys->sk);
     }
 
-    printf("\n~~~ DEBUG TEST ~~~\n");
+    /* printf("\n~~~ DEBUG TEST ~~~\n");
     err += paiShamir_interpolation(interpolation_list, currentNumberOfDevices, SUM);
     printf("SK_SUM: %s\n", SUM);
     err += bn_modexp(g_globals.params->g,SUM,g_globals.params->p,SUM);
@@ -94,7 +94,7 @@ unsigned int paiShamir_distribution(struct paillierKeychain *paikeys) {
     printf("INTER_SK: %s\n", SUM);
     err += bn_modexp(g_globals.params->g,SUM,g_globals.params->p,SUM);
     printf("~ PK: %s\n", SUM);
-    printf("~~~~~~~~~~~~~~~~~~\n\n");
+    printf("~~~~~~~~~~~~~~~~~~\n\n"); */
 
     if(err != (currentNumberOfDevices) * (4 + 2*(currentNumberOfDevices-2) + G_POLYDEGREE))
         return 0;
@@ -107,9 +107,9 @@ unsigned int paiShamir_get_ci(struct paillierKeychain *paikeys, unsigned char *k
 
     // POLYNOM CREATION
     unsigned char polynom[G_POLYDEGREE+1][BUFFER];
-    err += encrypt(paikeys->pk, kappa_i, polynom[0]);
+    err += encrypt(paikeys->pk, kappa_i, polynom[0], "0", "0");
     for (int i = 1; i < G_POLYDEGREE+1; i++) {
-        err += encrypt(paikeys->pk, d[i-1], polynom[i]);
+        err += encrypt(paikeys->pk, d[i-1], polynom[i], "0", "0");
     }
     //printf("ERR: %u\n POLY:\n|-> %s\n|-> %s\n|-> %s\n", err, polynom[0], polynom[1], polynom[2]);
 

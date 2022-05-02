@@ -377,8 +377,6 @@ unsigned int bn_genPrime(unsigned char *prime, int bits) {
     BIGNUM *bn_res = BN_new();
     BIGNUM *bn_rem = BN_new();
 
-    unsigned char *rnd_seed = "seed";
-    RAND_seed(rnd_seed, sizeof(rnd_seed));
     unsigned int err = BN_generate_prime_ex2(bn_res, bits, 1, NULL, NULL, NULL, ctx);
     if(err != 0)
         strcpy(prime, BN_bn2dec(bn_res));
