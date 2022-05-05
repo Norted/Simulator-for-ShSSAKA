@@ -83,7 +83,6 @@ unsigned int schnorr_sign(struct schnorr_Params *params, BIGNUM *sk, BIGNUM *mes
         printf(" * Hash compuatation failed! (schnorrs_signature, schnorr_sign)\n");
         goto end;
     }
-    printf(">> first S_H: %s\n", BN_bn2dec(signature->hash));
 
     err = BN_mod_mul(mul, sk, signature->hash, params->q, ctx);
     if (err != 1)
@@ -138,7 +137,6 @@ unsigned int schnorr_verify(struct schnorr_Params *params, BIGNUM *pk, BIGNUM *m
         goto end;
     }
 
-    printf(">> (s_sig) kappa 0?: %s\n", BN_bn2dec(kappa));
     if (BN_is_zero(kappa) != 1)
     {
         err = BN_mod_exp(kappa, signature->c_prime, signature->r, params->p, ctx);
@@ -155,8 +153,6 @@ unsigned int schnorr_verify(struct schnorr_Params *params, BIGNUM *pk, BIGNUM *m
         printf(" * Hash computation failed! (schnorrs_signatire, schnorr_verify)\n");
         goto end;
     }
-
-    printf(">> S_H: %s\n>> H_P: %s\n", BN_bn2dec(signature->hash), BN_bn2dec(hash_prime));
 
     if(BN_cmp(signature->hash, hash_prime) != 0)
     {

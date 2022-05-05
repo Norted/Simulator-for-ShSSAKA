@@ -97,7 +97,7 @@ int main(void)
         free_serversign(&server);
     //*/
 
-    /*  SSAKA test  
+    /*  SSAKA test  */
         printf("\n\n---SSAKA test---\n");
 
         unsigned int list_of_all_devs[currentNumberOfDevices-1];
@@ -127,7 +127,7 @@ int main(void)
             goto end;
         }
 
-        /* err = ssaka_ClientAddShare(3);
+        err = ssaka_ClientAddShare(3);
         if(err != 1)
         {
             printf(" * AddShare failed!\n");
@@ -154,7 +154,7 @@ int main(void)
         for (int j = 1; j < currentNumberOfDevices; j++) {
             printf("--- DEVICE %d ---\n", j);
             ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
-        } /
+        }
 
         /* err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
         if(err != 1)
@@ -164,7 +164,7 @@ int main(void)
             goto end;
         }
 
-        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s)); /
+        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s)); */
 
 
         err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
@@ -189,7 +189,7 @@ int main(void)
 
     //*/
 
-    /*  PAILLIER-SHAMIR test    */
+    /*  PAILLIER-SHAMIR test    
     printf("\n\n---PAILLIER-SHAMIR test---\n");
 
     BIGNUM *sk_sum = BN_new();
@@ -254,7 +254,7 @@ int main(void)
         printf("\n- DEVICE %d -\n", i);
         ssaka_keyPrinter(&g_ssaka_devicesKeys[i]);
     }
-    printf("\n"); */
+    printf("\n"); /
 
     err = paiShamir_interpolation(list_of_all_devs, currentNumberOfDevices, sk_chck);
     err = BN_mod_exp(pk_chck, g_globals.params->g, sk_chck, g_globals.params->p, ctx);

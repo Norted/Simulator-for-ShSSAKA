@@ -355,7 +355,6 @@ unsigned int hash(BIGNUM *res, BIGNUM *Y, BIGNUM *t_s, BIGNUM *kappa)
     strcat(inbuf, BN_bn2dec(Y));
     strcat(inbuf, BN_bn2dec(t_s));
 
-    printf(">> (hash) kappa 0?: %s\n", BN_bn2dec(kappa));
     if (BN_is_zero(kappa) != 1)
         strcat(inbuf, BN_bn2dec(kappa));
 
