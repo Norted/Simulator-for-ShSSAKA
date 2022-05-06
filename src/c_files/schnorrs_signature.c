@@ -16,6 +16,7 @@ unsigned int gen_schnorr_params(DSA *dsa, struct schnorr_Params *params)
     }
 
     return err;
+    //return gen_DSA(1, params, 0, NULL);
 }
 
 unsigned int gen_schnorr_keys(DSA *dsa, struct schnorr_Keychain *keys)
@@ -33,6 +34,7 @@ unsigned int gen_schnorr_keys(DSA *dsa, struct schnorr_Keychain *keys)
 
 end:
     return err;
+    //return gen_DSA(0, NULL, 1, keys);
 }
 
 unsigned int schnorr_sign(struct schnorr_Params *params, BIGNUM *sk, BIGNUM *message, BIGNUM *kappa, struct schnorr_Signature *signature)
@@ -58,7 +60,7 @@ unsigned int schnorr_sign(struct schnorr_Params *params, BIGNUM *sk, BIGNUM *mes
         }
     }
 
-    err = BN_mod_exp(c, params->g, signature->r, g_globals.params->q, ctx);
+    err = BN_mod_exp(c, params->g, signature->r, params->p, ctx);
     if (err != 1)
     {
         printf(" * Computation G^R mod P failed! (schnorrs_signature, schnorr_sign)\n");
@@ -67,7 +69,7 @@ unsigned int schnorr_sign(struct schnorr_Params *params, BIGNUM *sk, BIGNUM *mes
 
     if (BN_is_zero(kappa) != 1)
     {
-        err = BN_mod_exp(kappa, signature->c_prime, signature->r, g_globals.params->q, ctx);
+        err = BN_mod_exp(kappa, signature->c_prime, signature->r, params->p, ctx);
         if (err != 1)
         {
             printf(" * Computation of KAPPA failed! (schnorrs_signature, schnorr_sign)\n");
@@ -116,19 +118,19 @@ unsigned int schnorr_verify(struct schnorr_Params *params, BIGNUM *pk, BIGNUM *m
         goto end;
     }
 
-    err = BN_mod_exp(c_prime_1, params->g, signature->signature, g_globals.params->q, ctx);
+    err = BN_mod_exp(c_prime_1, params->g, signature->signature, params->p, ctx);
     if (err != 1)
     {
         printf(" * Computaion of G^signature mod P failed! (schnorrs_signature, schnorr_verify)\n");
         goto end;
     }
-    err = BN_mod_exp(c_prime_2, pk, signature->hash, g_globals.params->q, ctx);
+    err = BN_mod_exp(c_prime_2, pk, signature->hash, params->p, ctx);
     if (err != 1)
     {
         printf(" * Computation of PK^hash mod P failed! (schnorrs_signature, schnorr_verify)\n");
         goto end;
     }
-    err = BN_mod_mul(signature->c_prime, c_prime_1, c_prime_2, g_globals.params->q, ctx);
+    err = BN_mod_mul(signature->c_prime, c_prime_1, c_prime_2, params->p, ctx);
     if (err != 1)
     {
         printf(" * Computation of C_PRIME failed! (schnorrs_signature, schnorr_verify)\n");
@@ -137,7 +139,7 @@ unsigned int schnorr_verify(struct schnorr_Params *params, BIGNUM *pk, BIGNUM *m
 
     if (BN_is_zero(kappa) != 1)
     {
-        err = BN_mod_exp(kappa, signature->c_prime, signature->r, g_globals.params->q, ctx);
+        err = BN_mod_exp(kappa, signature->c_prime, signature->r, params->p, ctx);
         if (err != 1)
         {
             printf(" * Computation of KAPPA failed! (schnorrs_signature, schnorr_verify)\n");

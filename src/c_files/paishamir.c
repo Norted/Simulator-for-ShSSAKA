@@ -1,4 +1,4 @@
-#include <paishamir_OLD.h>
+#include <paishamir.h>
 
 unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys) {
     unsigned int err = 0;

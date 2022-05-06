@@ -7,7 +7,7 @@
 #include <schnorrs_signature.h>
 #include <paillier_scheme.h>
 #include <support_functions.h>
-#include <paishamir_OLD.h>
+#include <paishamir.h>
 #include <AKA.h>
 #include <SSAKA_OLD.h>
 
@@ -120,7 +120,7 @@ int main(void)
             goto end;
         }
 
-        /* err = ssaka_ClientAddShare(3);
+        err = ssaka_ClientAddShare(3);
         if(err != 1)
         {
             printf(" * AddShare failed!\n");
@@ -147,9 +147,9 @@ int main(void)
         for (int j = 1; j < currentNumberOfDevices; j++) {
             printf("--- DEVICE %d ---\n", j);
             ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
-        } /
+        }
 
-        err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
+        /*err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
         if(err != 1)
         {
             printf(" * SSAKA Server Sign Verify failed!\n");
@@ -157,10 +157,10 @@ int main(void)
             goto end;
         }
 
-        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
+        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));/
 
 
-        /* err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
+        err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
         if(err != 1)
         {
             printf(" * SSAKA Server Sign Verify failed!\n");
@@ -168,7 +168,7 @@ int main(void)
             goto end;
         } 
         
-        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s)); /
+        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
        
     
     end:
@@ -181,7 +181,7 @@ int main(void)
 
     //*/
 
-    /*  PAILLIER-SHAMIR test    
+    /*  PAILLIER-SHAMIR test   
     printf("\n\n---PAILLIER-SHAMIR test---\n");
 
     BIGNUM *sk_sum = BN_new();
@@ -190,7 +190,7 @@ int main(void)
     BN_CTX *ctx = BN_CTX_secure_new();
     
 
-    unsigned int list_of_used_devs[] = {0, 3, 1};
+    unsigned int list_of_used_devs[] = {2, 3, 1};
     unsigned int size_used = sizeof(list_of_used_devs) / sizeof(unsigned int);
 
     unsigned int list_of_all_devs[currentNumberOfDevices];
@@ -224,6 +224,7 @@ int main(void)
         g_ssaka_devicesKeys[i].kappa = BN_new();
 
         err = rand_range(g_ssaka_devicesKeys[i].keys->pk, g_globals.params->q);
+        //err = ssaka_KeyGeneration(&g_ssaka_devicesKeys[i]);
         if (err != 1)
         {
             printf(" * Generation of a random public key failed!\n");
@@ -278,12 +279,12 @@ end:
     BN_CTX_free(ctx);
     //*/
 
-    /*  SCHNORR test    */
+    /*  SCHNORR test    
         printf("\n\n---SCHNORR test---\n");
         int stop = 0;
 
-        struct schnorr_Params params;
-        init_schnorr_params(&params);
+        // struct schnorr_Params params;
+        // init_schnorr_params(&params);
         struct schnorr_Keychain keys_s;
         init_schnorr_keychain(&keys_s);
         struct schnorr_Signature sign_s;
@@ -298,14 +299,20 @@ end:
         BIGNUM *kappa_c = BN_new();
         BN_dec2bn(&kappa_c, "1");
 
-        err = gen_schnorr_params(dsa, &params);
+        BIGNUM *zero = BN_new();
+        BN_dec2bn(&zero, "0");
+
+
+        /* err = gen_schnorr_params(dsa, &params);
         if(err != 1)
         {
             printf(" * Failed to generate Schnorr parameters!\n");
             return_code = 0;
             goto end;
         }
-        printf("--- PARAMETERS ---\nERR: %u\nG: %s\nP: %s\nQ: %s\n", err, BN_bn2dec(params.g), BN_bn2dec(params.p), BN_bn2dec(params.q));
+        printf("--- PARAMETERS ---\nG: %s\nQ: %s\n", BN_bn2dec(params.g), BN_bn2dec(params.q)); /
+        
+
         err = gen_schnorr_keys(dsa, &keys_s);
         if(err != 1)
         {
@@ -313,7 +320,9 @@ end:
             return_code = 0;
             goto end;
         }
-        printf("\n--- KEYS SERVER --- \nERR: %u\nPK: %s\nSK: %s\n", err, BN_bn2dec(keys_s.pk), BN_bn2dec(keys_s.sk));
+        printf("\n--- KEYS SERVER --- \nPK: %s\nSK: %s\n", BN_bn2dec(keys_s.pk), BN_bn2dec(keys_s.sk));
+        
+
         err = gen_schnorr_keys(dsa, &keys_c);
         if(err != 1)
         {
@@ -321,28 +330,26 @@ end:
             return_code = 0;
             goto end;
         }
-        printf("\n--- KEYS CLIENT--- \nERR: %u\nPK: %s\nSK: %s\n", err, BN_bn2dec(keys_c.pk), BN_bn2dec(keys_c.sk));
+        printf("\n--- KEYS CLIENT--- \nPK: %s\nSK: %s\n", BN_bn2dec(keys_c.pk), BN_bn2dec(keys_c.sk));
 
-        BIGNUM *hash_prime = BN_new();
-        BIGNUM *zero = BN_new();
-        BN_dec2bn(&zero, "0");
+
 
         while(stop <= 10) {
             err = 0;
             BN_dec2bn(&kappa_s, "1");
             BN_dec2bn(&kappa_c, "1");
 
-            printf("\n\n~ TRY N#%d ~\n", stop);
-            err = schnorr_sign(&params, keys_s.sk, message, zero, &sign_s);
+            printf("\n\n~ TRY N#%d ~\n\n--- SIGNATURE SERVER ---\n", stop);
+            err = schnorr_sign(g_globals.params, keys_s.sk, message, zero, &sign_s); // &params
             if(err != 1)
             {
                 printf(" * Schnorr server signin failed!\n");
                 return_code = 0;
                 goto end;
             }
-            BN_copy(hash_prime, sign_s.hash);
-            printf("\n--- SIGNATURE SERVER ---\nERR: %u\nSIGNATURE: %s\nHASH: %s\n", err, BN_bn2dec(sign_s.signature), BN_bn2dec(sign_s.hash));
-            err = schnorr_verify(&params, keys_s.pk, message, zero, &sign_s);
+            
+            printf("SIGNATURE: %s\nHASH: %s\n", BN_bn2dec(sign_s.signature), BN_bn2dec(sign_s.hash));
+            err = schnorr_verify(g_globals.params, keys_s.pk, message, zero, &sign_s); // &params
             if(err != 1)
             {
                 printf(" * Schnorr server signature verification failed!\n");
@@ -354,18 +361,20 @@ end:
                 printf(" * Verification proceeded! :)\n");
             }
 
+
+            printf("\n--- SIGNATURE CLIENT ---\n");
             BN_copy(sign_c.c_prime, sign_s.c_prime);
-            err = schnorr_sign(&params, keys_c.sk, message, kappa_c, &sign_c);
+            err = schnorr_sign(g_globals.params, keys_c.sk, message, kappa_c, &sign_c); // &params
             if(err != 1)
             {
                 printf(" * Schnorr client signin failed!\n");
                 return_code = 0;
                 goto end;
             }
-            printf("\n--- SIGNATURE CLIENT ---\nERR: %u\nSIGNATURE: %s\nHASH: %s\n\nKAPPA_C: %s\n", err, BN_bn2dec(sign_c.signature), BN_bn2dec(sign_c.hash), BN_bn2dec(kappa_c));
+            printf("SIGNATURE: %s\nHASH: %s\n\nKAPPA_C: %s\n", BN_bn2dec(sign_c.signature), BN_bn2dec(sign_c.hash), BN_bn2dec(kappa_c));
 
             BN_copy(sign_c.r, sign_s.r);
-            err = schnorr_verify(&params, keys_c.pk, message, kappa_s, &sign_c);
+            err = schnorr_verify(g_globals.params, keys_c.pk, message, kappa_s, &sign_c); // &params
             printf("KAPPA_S: %s\n", BN_bn2dec(kappa_s));
             if(BN_cmp(kappa_c, kappa_s) != 0)
             {
@@ -381,16 +390,15 @@ end:
         }
 
     end:
-        printf("\n\nRETURN_CODE: %u\n", return_code);
+        printf("\n\nRETURN_CODE: %u\n\n", return_code);
 
-        free_schnorr_params(&params);
+        //free_schnorr_params(&params);
         free_schnorr_keychain(&keys_c);
         free_schnorr_keychain(&keys_s);
         free_schnorr_signature(&sign_c);
         free_schnorr_signature(&sign_s);
         BN_free(kappa_c);
         BN_free(kappa_s);
-        BN_free(hash_prime);
         BN_free(zero);
     //*/
 

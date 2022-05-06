@@ -4,7 +4,7 @@
 // extern headers
 #include <support_functions.h>
 #include <schnorrs_signature.h>
-#include <paishamir_OLD.h>
+#include <paishamir.h>
 #include <paillier_scheme.h>
 #include <AKA.h>
 #include <globals.h>
