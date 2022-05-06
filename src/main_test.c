@@ -97,12 +97,12 @@ int main(void)
         free_serversign(&server);
     //*/
 
-    /*  SSAKA test  */
+    /*  SSAKA test  
         printf("\n\n---SSAKA test---\n");
 
         unsigned int list_of_all_devs[currentNumberOfDevices-1];
         for (int i = 1; i < currentNumberOfDevices; i++) {
-            list_of_all_devs[i-1] = i;  //(unsigned int) atoi(g_ssaka_devicesKeys[i].ID);
+            list_of_all_devs[i-1] = i;
         }
         unsigned int size_all = sizeof(list_of_all_devs)/sizeof(unsigned int);
 
@@ -110,13 +110,6 @@ int main(void)
         unsigned int size_used = sizeof(list_of_used_devs)/sizeof(unsigned int);
 
         struct ServerSign server;
-        server = *(struct ServerSign *)malloc(sizeof(struct ServerSign));
-        if (&server == NULL)
-        {
-            printf(" * SERVER SIGN ALOCATION FAILED!\n");
-            return_code = 0;
-            goto end;
-        }
         init_serversign(&server);
 
         err = ssaka_setup();
@@ -127,7 +120,7 @@ int main(void)
             goto end;
         }
 
-        err = ssaka_ClientAddShare(3);
+        /* err = ssaka_ClientAddShare(3);
         if(err != 1)
         {
             printf(" * AddShare failed!\n");
@@ -154,9 +147,9 @@ int main(void)
         for (int j = 1; j < currentNumberOfDevices; j++) {
             printf("--- DEVICE %d ---\n", j);
             ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
-        }
+        } /
 
-        /* err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
+        err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
         if(err != 1)
         {
             printf(" * SSAKA Server Sign Verify failed!\n");
@@ -164,10 +157,10 @@ int main(void)
             goto end;
         }
 
-        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s)); */
+        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
 
 
-        err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
+        /* err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
         if(err != 1)
         {
             printf(" * SSAKA Server Sign Verify failed!\n");
@@ -175,8 +168,7 @@ int main(void)
             goto end;
         } 
         
-        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s)); 
-       
+        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s)); /
        
     
     end:
@@ -196,8 +188,9 @@ int main(void)
     BIGNUM *sk_chck = BN_new();
     BIGNUM *pk_chck = BN_new();
     BN_CTX *ctx = BN_CTX_secure_new();
+    
 
-    unsigned int list_of_used_devs[] = {0, 1, 2};
+    unsigned int list_of_used_devs[] = {0, 3, 1};
     unsigned int size_used = sizeof(list_of_used_devs) / sizeof(unsigned int);
 
     unsigned int list_of_all_devs[currentNumberOfDevices];
@@ -230,7 +223,7 @@ int main(void)
         init_schnorr_keychain(g_ssaka_devicesKeys[i].keys);
         g_ssaka_devicesKeys[i].kappa = BN_new();
 
-        err = rand_range(g_ssaka_devicesKeys[i].keys->pk, p_keychain.pk->n);
+        err = rand_range(g_ssaka_devicesKeys[i].keys->pk, g_globals.params->q);
         if (err != 1)
         {
             printf(" * Generation of a random public key failed!\n");
@@ -257,12 +250,12 @@ int main(void)
     printf("\n"); /
 
     err = paiShamir_interpolation(list_of_all_devs, currentNumberOfDevices, sk_chck);
-    err = BN_mod_exp(pk_chck, g_globals.params->g, sk_chck, g_globals.params->p, ctx);
+    err = BN_mod_exp(pk_chck, g_globals.params->g, sk_chck, g_globals.params->q, ctx);
     printf("\nRESULTS (ALL):\n|---> SK: %s\n|---> PK: %s\n",
     BN_bn2dec(sk_chck), BN_bn2dec(pk_chck));
 
     err = paiShamir_interpolation(list_of_used_devs, size_used, sk_chck);
-    err = BN_mod_exp(pk_chck, g_globals.params->g, sk_chck, g_globals.params->p, ctx);
+    err = BN_mod_exp(pk_chck, g_globals.params->g, sk_chck, g_globals.params->q, ctx);
     printf("\nRESULTS (PART):\n|---> SK: %s\n|---> PK: %s\n",
     BN_bn2dec(sk_chck), BN_bn2dec(pk_chck));
 
@@ -285,7 +278,7 @@ end:
     BN_CTX_free(ctx);
     //*/
 
-    /*  SCHNORR test
+    /*  SCHNORR test    */
         printf("\n\n---SCHNORR test---\n");
         int stop = 0;
 
@@ -401,7 +394,7 @@ end:
         BN_free(zero);
     //*/
 
-    /*  PAILLIER test
+    /*  PAILLIER test   
         printf("\n\n---PAILLIER test---\n");
 
         BIGNUM *enc = BN_new();
@@ -470,6 +463,29 @@ end:
         BN_free(dec);
         BN_free(zero1);
         BN_free(zero2);
+    //*/
+
+    /*  HASH test   
+        BIGNUM *res = BN_new();
+        BIGNUM *one = BN_new();
+        BIGNUM *zero = BN_new();
+        BN_dec2bn(&one, "1");
+        BN_dec2bn(&zero, "0");
+        for (int i = 0; i < 20; i++) {
+            err = hash(res, message, one, zero);
+            if(err != 1)
+            {
+                printf(" * Creation of hash (%d) failed!\n", i);
+                return_code = 0;
+                goto end;
+            }
+            printf("I: %d\tHASH: %s\n", i+1, BN_bn2dec(res));
+        }
+    
+    end:
+        BN_free(res);
+        BN_free(one);
+        BN_free(zero);
     //*/
 
     BN_free(message);
@@ -615,8 +631,3 @@ end:
 
     return err;
 }
-
-/* --- RESOURCES ---
- *  https://math.stackexchange.com/questions/814879/find-a-generator-of-the-multiplicative-group-of-mathbbz-23-mathbbz-as-a-c
- *  https://stackoverflow.com/questions/23360728/how-to-generate-a-number-of-n-bit-in-length
- */

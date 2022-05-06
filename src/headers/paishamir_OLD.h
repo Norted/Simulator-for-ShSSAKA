@@ -4,7 +4,6 @@
 #include <globals.h>
 #include <paillier_scheme.h>
 
-unsigned int _shamir_distribution(BIGNUM *secret);
 unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys);
 unsigned int paiShamir_get_ci(struct paillier_Keychain *paikeys, BIGNUM *kappa_i, BIGNUM *d[], BIGNUM *x, BIGNUM *ci);
 unsigned int paiShamir_get_cN_prime(struct paillier_Keychain *paikeys, BIGNUM *pre_cN, BIGNUM *cN, BIGNUM *cN_prime);
