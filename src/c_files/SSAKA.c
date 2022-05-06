@@ -1,4 +1,4 @@
-#include <SSAKA_OLD.h>
+#include <SSAKA.h>
 
 struct ssaka_Keychain g_ssaka_devicesKeys[G_NUMOFDEVICES];
 struct paillier_Keychain g_paiKeys;

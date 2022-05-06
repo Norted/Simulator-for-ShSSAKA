@@ -2,7 +2,7 @@
 #define __OPENSSL_BN_H__
 
 #include <schnorrs_signature.h>
-#include <SSAKA_OLD.h>
+#include <SSAKA.h>
 #include <globals.h>
 
 unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *lambda, struct paillier_PublicKey *pk);
