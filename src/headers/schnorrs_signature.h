@@ -2,7 +2,7 @@
 #define __SCHNORRS_SIGNATURE_H__
 
 #include <support_functions.h>
-#include <SSAKA_OLD.h>
+#include <SSAKA.h>
 #include <globals.h>
 
 
