@@ -21,9 +21,11 @@ void free_clientproof(struct ClientProof *client_proof);
 void init_deviceproof(struct DeviceProof *device_proof);
 void free_deviceproof(struct DeviceProof *device_proof);
 
+void *thread_creation(void *threadid);
+unsigned int threaded_precomputation();
+
 cJSON *parse_JSON(const char *restrict file_name);
 unsigned int find_value(cJSON *json, BIGNUM *search, BIGNUM *result);
-int save_keys(const char *restrict file_name, struct paillier_Keychain *keychain);
 void read_keys(const char *restrict file_name, struct paillier_Keychain *keychain);
 
 int precomputation(const char *restrict file_name, struct paillier_Keychain *keychain, BIGNUM *range, unsigned int type); // type: 1 ... message, 2 ... noise

@@ -444,6 +444,54 @@ void free_deviceproof(struct DeviceProof *device_proof)
     return;
 }
 
+void *thread_creation(void *threadid)
+{ // precomputation type: 0 ... noise, 1 ... message
+    unsigned int err = 0;
+    long tid;
+    tid = (long)threadid;
+
+    if (tid == 0)
+    {
+        err = precomputation(file_precomputed_noise, &g_paiKeys, range, 0);
+        if (err != 0)
+        {
+            printf(" * Noise precomputation failed!\n");
+            pthread_exit(NULL);
+        }
+    }
+    else if (tid == 1)
+    {
+        err = precomputation(file_precomputed_message, &g_paiKeys, range, 1);
+        if (err != 0)
+        {
+            printf(" * Message precomputation failed!\n");
+            pthread_exit(NULL);
+        }
+    }
+    else
+    {
+        printf(" * No other thread needed! (thread no. %ld)\n", tid);
+    }
+    pthread_exit(NULL);
+}
+
+unsigned int threaded_precomputation()
+{
+    int rc;
+    for (int i = 0; i < NUM_THREADS; i++)
+    {
+        printf("  main() : Creating thread, %d\n", i);
+        rc = pthread_create(&threads[i], NULL, thread_creation, (void *)i);
+        if (rc)
+        {
+            printf("  Error : Unable to create thread, %d\n", rc);
+            exit(-1);
+        }
+    }
+
+    return 0;
+}
+
 cJSON *parse_JSON(const char *restrict file_name)
 {
     cJSON *json = cJSON_CreateObject();
@@ -510,77 +558,6 @@ unsigned int find_value(cJSON *json, BIGNUM *search, BIGNUM *result)
     return err;
 }
 
-int save_keys(const char *restrict file_name, struct paillier_Keychain *keychain)
-{
-    unsigned int err = 0;
-    FILE *file = fopen(file_name, "w");
-
-    cJSON *json = cJSON_CreateObject();
-    if (json == NULL)
-    {
-        goto end;
-    }
-
-    cJSON *pk_values = cJSON_CreateObject();
-    if (pk_values == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(pk_values, "n", BN_bn2dec(keychain->pk->n)) == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(pk_values, "n_sq", BN_bn2dec(keychain->pk->n_sq)) == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(pk_values, "g", BN_bn2dec(keychain->pk->g)) == NULL)
-    {
-        goto end;
-    }
-    cJSON_AddItemToObject(json, "pk", pk_values);
-
-    cJSON *sk_values = cJSON_CreateObject();
-    if (sk_values == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(sk_values, "p", BN_bn2dec(keychain->sk->p)) == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(sk_values, "q", BN_bn2dec(keychain->sk->q)) == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(sk_values, "lambda", BN_bn2dec(keychain->sk->lambda)) == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(sk_values, "mi", BN_bn2dec(keychain->sk->mi)) == NULL)
-    {
-        goto end;
-    }
-    cJSON_AddItemToObject(json, "sk", sk_values);
-
-    char *output = cJSON_Print(json);
-    if (output == NULL)
-    {
-        printf(" * Failed to print json.\n");
-    }
-
-    if (!fputs(output, file))
-    {
-        printf(" * Failed to write to file %s!\n", file_name);
-        return 0;
-    }
-
-end:
-    cJSON_Delete(json);
-
-    return fclose(file);
-}
-
 void read_keys(const char *restrict file_name, struct paillier_Keychain *keychain)
 {
     unsigned int err = 0;
@@ -607,18 +584,14 @@ void read_keys(const char *restrict file_name, struct paillier_Keychain *keychai
 }
 
 int precomputation(const char *restrict file_name, struct paillier_Keychain *keychain, BIGNUM *range, unsigned int type)
-{ // type 1 ... message, 2 ... noise
-    if (type == 1)
+{ // type 0 ... message, 1 ... noise
+    if (type == 0)
     {
         printf(" * Message precomputation STARTED ... \n");
     }
-    else if (type == 2)
+    else if (type == 1)
     {
-        printf(" * Noise scheme 1 precomputation STARTED ... \n");
-    }
-    else if (type == 3)
-    {
-        printf(" * Noise scheme 3 precomputation STARTED ... \n");
+        printf(" * Noise precomputation STARTED ... \n");
     }
     else
     {
@@ -678,7 +651,7 @@ int precomputation(const char *restrict file_name, struct paillier_Keychain *key
     cJSON_AddItemToObject(json, "sk", sk_values);
 
     cJSON *precomp = cJSON_CreateArray();
-    if (type == 1)
+    if (type == 0)
     {
         precomp = message_precomp(range, keychain->pk->g, keychain->pk->n_sq);
     }
@@ -689,17 +662,13 @@ int precomputation(const char *restrict file_name, struct paillier_Keychain *key
 
     cJSON_AddItemToObject(json, "precomputed_values", precomp);
 
-    if (type == 1)
+    if (type == 0)
     {
         printf(" * Message precomputation DONE!\n");
     }
-    else if (type == 2)
+    else if (type == 1)
     {
-        printf(" * Noise scheme 1 precomputation DONE!\n");
-    }
-    else
-    {
-        printf(" * Noise scheme 3 precomputation DONE!\n");
+        printf(" * Noise precomputation DONE!\n");
     }
 
     char *output = cJSON_Print(json);
@@ -738,7 +707,7 @@ cJSON *message_precomp(BIGNUM *range, BIGNUM *base, BIGNUM *mod)
 
     cJSON *values = NULL;
     unsigned char string[BUFFER];
-    for (int i = 1; i < atoi(BN_bn2dec(range)); i++)
+    for (int i = 0; i < atoi(BN_bn2dec(range)); i++)
     {
         sprintf(string, "%d", i);
         BN_dec2bn(&tmp_value, string);

@@ -20,7 +20,7 @@ struct aka_Keychain g_aka_clientKeys;
 unsigned int aka_setup()
 {
     int i = 0;
-    
+
     printf("---SERVER---\n");
     init_aka_mem(&g_serverKeys);
     if (!g_serverKeys.ID || !g_serverKeys.keys->pk || !g_serverKeys.keys->sk)
@@ -55,7 +55,7 @@ unsigned int aka_serverSignVerify(BIGNUM *Y, struct ServerSign *server)
         return 0;
     }
 
-    unsigned char *ver = malloc(sizeof(char*) * BUFFER);
+    unsigned char *ver = malloc(sizeof(char *) * BUFFER);
     struct ClientProof client;
     struct schnorr_Signature signature;
     /* signature = malloc(sizeof(struct schnorr_Signature));
@@ -92,7 +92,7 @@ unsigned int aka_serverSignVerify(BIGNUM *Y, struct ServerSign *server)
     sprintf(ver, "%d", schnorr_verify(g_globals.params, g_aka_clientKeys.keys->pk, Y, server->kappa, client.signature));
     BN_dec2bn(&server->tau_s, ver);
 
-    //printf("** S_KAPPA: %s\n** C_KAPPA: %s\n", BN_bn2dec(server->kappa), BN_bn2dec(client.kappa));
+    // printf("** S_KAPPA: %s\n** C_KAPPA: %s\n", BN_bn2dec(server->kappa), BN_bn2dec(client.kappa));
     if (BN_cmp(server->kappa, client.kappa) == 0)
         printf("\n~ GOOD! :)\n\n");
 
@@ -106,8 +106,8 @@ end:
 unsigned int aka_clientProofVerify(BIGNUM *Y, struct schnorr_Signature *server_signature, struct ClientProof *client)
 {
     unsigned int err = 0;
-    unsigned char *ver = malloc(sizeof(char*) * BUFFER);
-    BIGNUM * zero = BN_new();
+    unsigned char *ver = malloc(sizeof(char *) * BUFFER);
+    BIGNUM *zero = BN_new();
     BN_dec2bn(&zero, "0");
 
     sprintf(ver, "%d", schnorr_verify(g_globals.params, g_serverKeys.keys->pk, Y, zero, server_signature));
@@ -145,7 +145,7 @@ void init_aka_mem(struct aka_Keychain *keychain)
 
 void free_aka_mem(struct aka_Keychain *keychain)
 {
-    //keychain->ID = NULL;
+    // keychain->ID = NULL;
     free_schnorr_keychain(keychain->keys);
     free(keychain->keys);
     return;

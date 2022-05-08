@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <unistd.h>
 // local headers
 #include <globals.h>
 #include <schnorrs_signature.h>
@@ -9,7 +10,7 @@
 #include <support_functions.h>
 #include <paishamir.h>
 #include <AKA.h>
-#include <SSAKA_OLD.h>
+#include <SSAKA.h>
 
 // Keychains
 struct aka_Keychain g_serverKeys;
@@ -23,6 +24,13 @@ BIGNUM *pk_c;
 struct globals g_globals;
 unsigned int currentNumberOfDevices = 4;
 DSA *dsa;
+BIGNUM *range;
+unsigned int pre_noise = 0;
+unsigned int pre_message = 0;
+
+// File names
+const char *restrict file_precomputed_noise = "../precomputed_values/precomputation_noise.json";
+const char *restrict file_precomputed_message = "../precomputed_values/precomputation_message.json";
 
 unsigned int test_homomorphy();
 unsigned int test_paiShamir();
@@ -58,7 +66,7 @@ int main(void)
 
     BIGNUM *pk_c = BN_new();
     BIGNUM * message = BN_new();
-    BN_dec2bn(&message, "1234");
+    BN_dec2bn(&message, "123");
     
 
     /*  AKA-SETUP and AKA-CLIENT-REGISTER
@@ -496,6 +504,61 @@ end:
         BN_free(zero);
     //*/
 
+    /*  PRE_COMPUTATION test    
+        BIGNUM *result = BN_new();
+        range = BN_new();
+        cJSON *json_noise = cJSON_CreateObject();
+        cJSON *json_message = cJSON_CreateObject();
+        unsigned char *tmp_string = (char*)malloc(sizeof(char)*BUFFER/2);
+
+        sprintf(tmp_string, "%d", RANGE);
+        BN_dec2bn(&range, tmp_string);
+
+        init_paillier_keychain(&g_paiKeys);
+        
+        if (access(file_precomputed_noise, F_OK) || access(file_precomputed_message, F_OK))
+        {
+            if (!paillier_generate_keypair(&g_paiKeys))
+            {
+                printf(" * Keychain generation failed!\n");
+                return 0;
+            }
+            threaded_precomputation();
+            for (int i = 0; i < NUM_THREADS; i++)
+            {
+                pthread_join(threads[i], NULL);
+            }
+        }
+        else
+        {
+            if(noise_precomp && access(file_precomputed_noise, F_OK))
+            {
+                read_keys(file_precomputed_noise, &g_paiKeys);
+            }
+            else if(message_precomp && access(file_precomputed_message, F_OK))
+            {
+                read_keys(file_precomputed_message, &g_paiKeys);
+            }
+        }
+
+        json_noise = parse_JSON(file_precomputed_noise);
+        err = find_value(json_noise, message, result);
+        if (err != 1)
+        {
+            printf(" * Find value test failed!\n");
+            goto end;
+        }
+        else
+            printf("FOUND!\n|---> SECRET: %s\n|---> RESULT: %s\n", BN_bn2dec(message), BN_bn2dec(result));
+        json_message = parse_JSON(file_precomputed_message);
+    
+    end:
+        BN_free(result);
+        cJSON_free(json_noise);
+        cJSON_free(json_message);
+    //*/
+
+    free_paillier_keychain(&g_paiKeys);
     BN_free(message);
     BN_free(pk_c);
     DSA_free(dsa);
