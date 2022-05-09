@@ -1,5 +1,5 @@
-#ifndef __GLOBALS_H__
-#define __GLOBALS_H__
+#ifndef __GLOBALS_EC_H__
+#define __GLOBALS_EC_H__
 
 // ======== MACROS ======================================================================
 #define NUM_THREADS 2
@@ -19,7 +19,6 @@
 #include <string.h>
 #include <openssl/bn.h>
 #include <openssl/sha.h>
-#include <openssl/dsa.h>
 #include <openssl/ec.h>
 #include <openssl/obj_mac.h>
 #include <cjson/cJSON.h>
@@ -47,12 +46,31 @@ struct paillier_Keychain
     struct paillier_PublicKey *pk;
 };
 
-// SCHNORR STRUCTS
-struct schnorr_Params
+// SIGNS & PROOFS STRUCTS
+struct ServerSign
 {
-    BIGNUM *p;
-    BIGNUM *q;
-    BIGNUM *g;
+    BIGNUM *tau_s;
+    EC_POINT *kappa;
+};
+
+struct ClientProof
+{
+    BIGNUM *tau_c;
+    struct schnorr_Signature *signature;
+    EC_POINT *kappa;
+};
+
+struct DeviceProof
+{
+    BIGNUM *s_i;
+    EC_POINT *kappa_i;
+};
+
+// SCHNORR STRUCTS
+struct schnorr_Keychain
+{
+    EC_GROUP *ec_group; //secp256k1
+    EC_KEY *keys;
 };
 
 struct schnorr_Signature
@@ -60,70 +78,39 @@ struct schnorr_Signature
     BIGNUM *hash;
     BIGNUM *signature;
     BIGNUM *r;
-    BIGNUM *c_prime;
+    EC_POINT *c_prime;
 };
 
-struct schnorr_Keychain
-{
-    BIGNUM *pk;
-    BIGNUM *sk;
-};
-
-// SIGNS & PROOFS STRUCTS
-struct ServerSign
-{
-    BIGNUM *tau_s;
-    BIGNUM *kappa;
-};
-
-struct ClientProof
-{
-    BIGNUM *tau_c;
-    struct schnorr_Signature *signature;
-    BIGNUM *kappa;
-};
-
-struct DeviceProof
-{
-    BIGNUM *s_i;
-    BIGNUM *kappa_i;
-};
-
-// AKA STRUCTS
+// AKA STRUCT
 struct aka_Keychain
 {
     struct schnorr_Keychain *keys;
     unsigned int ID;
 };
 
-// SSAKA STRUCTS
+// SSAKA STRUCT
 struct ssaka_Keychain
 {
     unsigned int ID;
     struct schnorr_Keychain *keys;
-    BIGNUM *kappa;
+    EC_POINT *kappa;
 };
 
 // GLOBALS STRUCT
 struct globals
 {
-    struct schnorr_Params *params; // Schnorr's Signature struct with p, q, g params
-    unsigned int idCounter;        // helping couter for CID generation
+    struct schnorr_Keychain *keychain;
+    unsigned int idCounter;
 };
 
 // ======== EXTERNS =====================================================================
 extern struct globals g_globals;
-
-// Keychains
 extern struct ssaka_Keychain g_ssaka_devicesKeys[];
 extern struct aka_Keychain g_serverKeys;
 extern struct aka_Keychain g_aka_clientKeys;
-extern struct paillier_Keychain g_paiKeys;
-
-// Support globals
 extern unsigned int currentNumberOfDevices;
+extern struct paillier_Keychain g_paiKeys;
 extern BIGNUM *pk_c;
-extern DSA *dsa;
 
 // Threding and pre-computation
 pthread_t threads[NUM_THREADS];

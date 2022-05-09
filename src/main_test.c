@@ -42,33 +42,34 @@ int main(void)
     unsigned int return_code = 1;
     unsigned int err = 0;
 
-    dsa = DSA_new();
-    if(!dsa)
-    {
-        printf(" * DSA initialization failed!\n");
-        return 0;
-    }
+    BIGNUM *pk_c = BN_new();
+    BIGNUM * message = BN_new();
+    BN_dec2bn(&message, "123");
 
     g_globals.idCounter = 1;
-    g_globals.params = (struct schnorr_Params *)malloc(sizeof(struct schnorr_Params));
-    if (g_globals.params == NULL)
+    g_globals.keychain = (struct schnorr_Keychain *)malloc(sizeof(struct schnorr_Keychain));
+    init_schnorr_params(g_globals.keychain);
+
+    EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
+    if(group == NULL)
     {
-        printf(" * PARAMS ALOCATION FAILED!\n");
+        printf(" * Failed to generate EC group!\n");
         return_code = 0;
-        return 0;
+        goto final;
     }
-    init_schnorr_params(g_globals.params);
-    err = gen_schnorr_params(dsa, g_globals.params);
+    if (g_globals.keychain == NULL)
+    {
+        printf(" * KEYCHAIN ALOCATION FAILED!\n");
+        return_code = 0;
+        goto final;
+    }
+    err = gen_schnorr_params(group, g_globals.keychain);
     if (err != 1)
     {
         printf(" * Failed to generate Schnorr params!\n");
         return_code = 0;
-        return 0;
+        goto final;
     }
-
-    BIGNUM *pk_c = BN_new();
-    BIGNUM * message = BN_new();
-    BN_dec2bn(&message, "123");
     
 
     /*  AKA-SETUP and AKA-CLIENT-REGISTER
@@ -289,104 +290,109 @@ end:
     BN_CTX_free(ctx);
     //*/
 
-    /*  SCHNORR test    
+    /*  SCHNORR test    */
         printf("\n\n---SCHNORR test---\n");
         int stop = 0;
 
-        // struct schnorr_Params params;
-        // init_schnorr_params(&params);
-        struct schnorr_Keychain keys_s;
-        init_schnorr_keychain(&keys_s);
-        struct schnorr_Signature sign_s;
-        init_schnorr_signature(&sign_s);
-        struct schnorr_Keychain keys_c;
-        init_schnorr_keychain(&keys_c);
-        struct schnorr_Signature sign_c;
-        init_schnorr_signature(&sign_c);
+        struct schnorr_Keychain s_keychain;
+        struct schnorr_Signature s_signature;
+        struct schnorr_Keychain c_keychain;
+        struct schnorr_Signature c_signature;
 
-        BIGNUM *kappa_s = BN_new();
-        BN_dec2bn(&kappa_s, "1");
-        BIGNUM *kappa_c = BN_new();
-        BN_dec2bn(&kappa_c, "1");
+        EC_POINT *s_kappa;
+        EC_POINT *c_kappa;
 
-        BIGNUM *zero = BN_new();
-        BN_dec2bn(&zero, "0");
-
-
-        /* err = gen_schnorr_params(dsa, &params);
-        if(err != 1)
+        BN_CTX *ctx = BN_CTX_secure_new();
+        if(!ctx)
         {
-            printf(" * Failed to generate Schnorr parameters!\n");
+            printf(" * Failed to genetare CTX!\n");
             return_code = 0;
             goto end;
         }
-        printf("--- PARAMETERS ---\nG: %s\nQ: %s\n", BN_bn2dec(params.g), BN_bn2dec(params.q)); /
+
+        err = gen_schnorr_params(group, &s_keychain);
+        if(err != 1)
+        {
+            printf(" * Failed to generate EC parameters!\n");
+            return_code = 0;
+            goto final;
+        }
+        init_schnorr_signature(group, &s_signature);
+
+        err = gen_schnorr_params(group, &c_keychain);
+        if(err != 1)
+        {
+            printf(" * Failed to generate EC parameters!\n");
+            return_code = 0;
+            goto final;
+        }
+        init_schnorr_signature(group, &c_signature);
         
-
-        err = gen_schnorr_keys(dsa, &keys_s);
+        /* EC_POINT *s_kappa = EC_POINT_new(s_keychain.ec_group);
+        err = EC_POINT_set_to_infinity(s_keychain.ec_group, s_kappa);
         if(err != 1)
         {
-            printf(" * Failed to generate server's Schnorr keychain!\n");
+            printf(" * Server KAPPA not set to infinity!\n");
             return_code = 0;
             goto end;
         }
-        printf("\n--- KEYS SERVER --- \nPK: %s\nSK: %s\n", BN_bn2dec(keys_s.pk), BN_bn2dec(keys_s.sk));
         
-
-        err = gen_schnorr_keys(dsa, &keys_c);
+        EC_POINT *c_kappa = EC_POINT_new(c_keychain.ec_group);
+        err = EC_POINT_set_to_infinity(c_keychain.ec_group, c_kappa);
         if(err != 1)
         {
-            printf(" * Failed to generate client's Schnorr keychain!\n");
+            printf(" * Client KAPPA not set to infinity!\n");
             return_code = 0;
             goto end;
-        }
-        printf("\n--- KEYS CLIENT--- \nPK: %s\nSK: %s\n", BN_bn2dec(keys_c.pk), BN_bn2dec(keys_c.sk));
-
-
+        } */     
 
         while(stop <= 10) {
             err = 0;
-            BN_dec2bn(&kappa_s, "1");
-            BN_dec2bn(&kappa_c, "1");
-
-            printf("\n\n~ TRY N#%d ~\n\n--- SIGNATURE SERVER ---\n", stop);
-            err = schnorr_sign(g_globals.params, keys_s.sk, message, zero, &sign_s); // &params
-            if(err != 1)
-            {
-                printf(" * Schnorr server signin failed!\n");
-                return_code = 0;
-                goto end;
-            }
+            s_kappa = EC_POINT_new(group);
+            c_kappa = EC_POINT_new(group);
             
-            printf("SIGNATURE: %s\nHASH: %s\n", BN_bn2dec(sign_s.signature), BN_bn2dec(sign_s.hash));
-            err = schnorr_verify(g_globals.params, keys_s.pk, message, zero, &sign_s); // &params
+            printf("\n\n~ TRY N#%d ~\n\n--- SIGNATURE SERVER ---\n", stop);
+            err = schnorr_sign(&s_keychain, EC_KEY_get0_private_key(s_keychain.keys), message, s_kappa, &s_signature);
             if(err != 1)
             {
-                printf(" * Schnorr server signature verification failed!\n");
+                printf(" * EC Schnorr sign failed!\n");
                 return_code = 0;
                 goto end;
             }
             else
             {
-                printf(" * Verification proceeded! :)\n");
+                printf(" * Server signature created!\n    |--> SIG: %s\n", BN_bn2dec(s_signature.signature));
             }
 
-
-            printf("\n--- SIGNATURE CLIENT ---\n");
-            BN_copy(sign_c.c_prime, sign_s.c_prime);
-            err = schnorr_sign(g_globals.params, keys_c.sk, message, kappa_c, &sign_c); // &params
+            err = schnorr_verify(&s_keychain, EC_KEY_get0_public_key(s_keychain.keys), message, s_kappa, &s_signature);
             if(err != 1)
             {
-                printf(" * Schnorr client signin failed!\n");
+                printf(" * EC Schnorr sign failed!\n");
                 return_code = 0;
                 goto end;
             }
-            printf("SIGNATURE: %s\nHASH: %s\n\nKAPPA_C: %s\n", BN_bn2dec(sign_c.signature), BN_bn2dec(sign_c.hash), BN_bn2dec(kappa_c));
+            else
+            {
+                printf(" * Server verification successful! :)\n");
+            }
 
-            BN_copy(sign_c.r, sign_s.r);
-            err = schnorr_verify(g_globals.params, keys_c.pk, message, kappa_s, &sign_c); // &params
-            printf("KAPPA_S: %s\n", BN_bn2dec(kappa_s));
-            if(BN_cmp(kappa_c, kappa_s) != 0)
+            printf("\n--- SIGNATURE CLIENT ---\n");
+            BN_copy(c_signature.c_prime, s_signature.c_prime);
+            err = schnorr_sign(&c_keychain, EC_KEY_get0_private_key(c_keychain.keys), message, c_kappa, &c_signature);
+            if(err != 1)
+            {
+                printf(" * EC Schnorr sign failed!\n");
+                return_code = 0;
+                goto end;
+            }
+            else
+            {
+                printf(" * Server signature created!\n    |--> SIG: %s\n", BN_bn2dec(c_signature.signature));
+            }
+
+            BN_copy(c_signature.r, s_signature.r);
+            err = schnorr_verify(&c_keychain, EC_KEY_get0_public_key(c_keychain.keys), message, s_kappa, &c_signature);
+            if(EC_POINT_cmp(group, c_kappa, s_kappa, ctx) != 0)
             {
                 printf(" * Schnorr client signature verification failed!\n");
                 return_code = 0;
@@ -402,14 +408,13 @@ end:
     end:
         printf("\n\nRETURN_CODE: %u\n\n", return_code);
 
-        //free_schnorr_params(&params);
-        free_schnorr_keychain(&keys_c);
-        free_schnorr_keychain(&keys_s);
-        free_schnorr_signature(&sign_c);
-        free_schnorr_signature(&sign_s);
-        BN_free(kappa_c);
-        BN_free(kappa_s);
-        BN_free(zero);
+        EC_POINT_free(s_kappa);
+        EC_POINT_free(c_kappa);
+
+        free_schnorr_keychain(&s_keychain);
+        free_schnorr_signature(&s_signature);
+        free_schnorr_keychain(&c_keychain);
+        free_schnorr_signature(&c_signature);
     //*/
 
     /*  PAILLIER test   
@@ -562,9 +567,10 @@ end:
     //*/
 
 final:
+
+    EC_GROUP_free(group);
     BN_free(message);
     BN_free(pk_c);
-    DSA_free(dsa);
 
     return return_code;
 }

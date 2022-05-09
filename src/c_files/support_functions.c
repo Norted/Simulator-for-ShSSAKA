@@ -438,26 +438,26 @@ end:
     return err;
 }
 
-void init_serversign(struct ServerSign *server_sign)
+void init_serversign(EC_GROUP *group, struct ServerSign *server_sign)
 {
     server_sign->tau_s = BN_new();
-    server_sign->kappa = BN_new();
+    server_sign->kappa = EC_POINT_new(group);
     return;
 }
 
 void free_serversign(struct ServerSign *server_sign)
 {
     BN_free(server_sign->tau_s);
-    BN_free(server_sign->kappa);
+    EC_POINT_free(server_sign->kappa);
     return;
 }
 
-void init_clientproof(struct ClientProof *client_proof)
+void init_clientproof(EC_GROUP *group, struct ClientProof *client_proof)
 {
     client_proof->tau_c = BN_new();
     client_proof->signature = (struct schnorr_Signature *)malloc(sizeof(struct schnorr_Signature));
-    init_schnorr_signature(client_proof->signature);
-    client_proof->kappa = BN_new();
+    init_schnorr_signature(group, client_proof->signature);
+    client_proof->kappa = EC_POINT_new(group);
     return;
 }
 
@@ -466,21 +466,21 @@ void free_clientproof(struct ClientProof *client_proof)
     BN_free(client_proof->tau_c);
     free_schnorr_signature(client_proof->signature);
     free(client_proof->signature);
-    BN_free(client_proof->kappa);
+    EC_POINT_free(client_proof->kappa);
     return;
 }
 
-void init_deviceproof(struct DeviceProof *device_proof)
+void init_deviceproof(EC_GROUP *group, struct DeviceProof *device_proof)
 {
     device_proof->s_i = BN_new();
-    device_proof->kappa_i = BN_new();
+    device_proof->kappa_i = EC_POINT_new(group);
     return;
 }
 
 void free_deviceproof(struct DeviceProof *device_proof)
 {
     BN_free(device_proof->s_i);
-    BN_free(device_proof->kappa_i);
+    EC_POINT_free(device_proof->kappa_i);
     return;
 }
 

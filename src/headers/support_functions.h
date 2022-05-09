@@ -15,11 +15,11 @@ unsigned int hash(BIGNUM *res, BIGNUM *Y, BIGNUM *t_s, BIGNUM *kappa);
 unsigned int ec_hash(EC_GROUP *group, BIGNUM *res, BIGNUM *Y, EC_POINT *t_s, EC_POINT *kappa);
 unsigned int rand_range(BIGNUM * rnd, BIGNUM * range);
 
-void init_serversign(struct ServerSign *server_sign);
+void init_serversign(EC_GROUP *group, struct ServerSign *server_sign);
 void free_serversign(struct ServerSign *server_sign);
-void init_clientproof(struct ClientProof *client_proof);
+void init_clientproof(EC_GROUP *group, struct ClientProof *client_proof);
 void free_clientproof(struct ClientProof *client_proof);
-void init_deviceproof(struct DeviceProof *device_proof);
+void init_deviceproof(EC_GROUP *group, struct DeviceProof *device_proof);
 void free_deviceproof(struct DeviceProof *device_proof);
 
 void *thread_creation(void *threadid);

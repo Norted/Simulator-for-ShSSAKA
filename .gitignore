@@ -1,6 +1,5 @@
 # libraries folder
 openssl/
-EC/
 
 # binary files
 GUI
