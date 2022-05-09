@@ -21,53 +21,10 @@
 #include <openssl/sha.h>
 #include <openssl/dsa.h>
 #include <openssl/ec.h>
+#include <openssl/obj_mac.h>
 #include <cjson/cJSON.h>
 
 // ======== STRUCTS =====================================================================
-// SCHNORR STRUCTS
-struct schnorr_Params
-{
-    BIGNUM *p;
-    BIGNUM *q;
-    BIGNUM *g;
-};
-
-struct schnorr_Signature
-{
-    BIGNUM *hash;
-    BIGNUM *signature;
-    BIGNUM *r;
-    BIGNUM *c_prime;
-};
-
-struct schnorr_Keychain
-{
-    BIGNUM *pk;
-    BIGNUM *sk;
-};
-
-// EC SCHNORR STRUCTS
-struct EC_schnorr_Params
-{
-    BIGNUM *p;
-    BIGNUM *q;
-    BIGNUM *g;
-};
-
-struct EC_schnorr_Signature
-{
-    BIGNUM *hash;
-    BIGNUM *signature;
-    BIGNUM *r;
-    BIGNUM *c_prime;
-};
-
-struct EC_schnorr_Keychain
-{
-    BIGNUM *pk;
-    BIGNUM *sk;
-};
-
 // PAILLIER STRUCTS
 struct paillier_PrivateKey
 {
@@ -88,6 +45,28 @@ struct paillier_Keychain
 {
     struct paillier_PrivateKey *sk;
     struct paillier_PublicKey *pk;
+};
+
+// SCHNORR STRUCTS
+struct schnorr_Params
+{
+    BIGNUM *p;
+    BIGNUM *q;
+    BIGNUM *g;
+};
+
+struct schnorr_Signature
+{
+    BIGNUM *hash;
+    BIGNUM *signature;
+    BIGNUM *r;
+    BIGNUM *c_prime;
+};
+
+struct schnorr_Keychain
+{
+    BIGNUM *pk;
+    BIGNUM *sk;
 };
 
 // SIGNS & PROOFS STRUCTS
@@ -134,17 +113,17 @@ struct globals
 
 // ======== EXTERNS =====================================================================
 extern struct globals g_globals;
-extern unsigned int currentNumberOfDevices;
-extern DSA *dsa;
 
-// SSAKA globals
+// Keychains
 extern struct ssaka_Keychain g_ssaka_devicesKeys[];
-extern struct paillier_Keychain g_paiKeys;
-extern BIGNUM *pk_c;
-
-// AKA globals
 extern struct aka_Keychain g_serverKeys;
 extern struct aka_Keychain g_aka_clientKeys;
+extern struct paillier_Keychain g_paiKeys;
+
+// Support globals
+extern unsigned int currentNumberOfDevices;
+extern BIGNUM *pk_c;
+extern DSA *dsa;
 
 // Threding and pre-computation
 pthread_t threads[NUM_THREADS];

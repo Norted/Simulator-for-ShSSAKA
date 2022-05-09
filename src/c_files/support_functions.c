@@ -375,6 +375,46 @@ end:
     return err;
 }
 
+unsigned int ec_hash(EC_GROUP *group, BIGNUM *res, BIGNUM *Y, EC_POINT *t_s, EC_POINT *kappa)
+{
+    unsigned int err = 0;
+    BN_CTX *ctx = BN_CTX_secure_new();
+    if(!ctx)
+    {
+        printf(" * Failed to generate CTX! (ec_hash, support_functions)\n");
+        return err;
+    }
+
+    unsigned char *inbuf = (unsigned char *)calloc(BUFFER * 2, sizeof(unsigned char));
+    inbuf[0] = '\0';
+    for (int i = 1; i < (BUFFER * 2); i++)
+        inbuf[i] = '0';
+    unsigned char *outbuf = (unsigned char *)calloc(SHA256_DIGEST_LENGTH, sizeof(unsigned char));
+    unsigned char *digest = (unsigned char *)calloc((SHA256_DIGEST_LENGTH * 2 + 1), sizeof(unsigned char));
+
+    strcat(inbuf, BN_bn2dec(Y));
+    strcat(inbuf, EC_POINT_point2hex(group, t_s, POINT_CONVERSION_COMPRESSED, ctx));
+
+    if (EC_POINT_is_at_infinity(group, kappa) != 1)
+        strcat(inbuf, EC_POINT_point2hex(group, kappa, POINT_CONVERSION_COMPRESSED, ctx));
+
+    SHA256(inbuf, strlen(inbuf), outbuf);
+
+    digest[SHA256_DIGEST_LENGTH * 2] = '\0';
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    {
+        snprintf(&(digest[i * 2]), SHA256_DIGEST_LENGTH, "%02x", (unsigned int)outbuf[i]);
+    }
+    BN_hex2bn(&res, digest);
+    err = 1;
+
+end:
+    free(outbuf);
+    free(inbuf);
+    free(digest);
+    return err;
+}
+
 unsigned int rand_range(BIGNUM *rnd, BIGNUM *range)
 {
     unsigned int err = 0;

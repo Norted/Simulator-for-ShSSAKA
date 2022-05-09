@@ -20,10 +20,12 @@ extern struct ssaka_Keychain g_ssaka_devicesKeys[G_NUMOFDEVICES];
 struct paillier_Keychain g_paiKeys;
 BIGNUM *pk_c;
 
-// Other globals
+// Globals
 struct globals g_globals;
 unsigned int currentNumberOfDevices = 4;
 DSA *dsa;
+
+// Threding and pre-computation globals
 BIGNUM *range;
 unsigned int pre_noise = 0;
 unsigned int pre_message = 0;
@@ -504,7 +506,7 @@ end:
         BN_free(zero);
     //*/
 
-    /*  PRE_COMPUTATION test    
+    /*  PRE-COMPUTATION test    
         BIGNUM *result = BN_new();
         range = BN_new();
         cJSON *json_noise = cJSON_CreateObject();
@@ -553,12 +555,13 @@ end:
         json_message = parse_JSON(file_precomputed_message);
     
     end:
+        free_paillier_keychain(&g_paiKeys);
         BN_free(result);
         cJSON_free(json_noise);
         cJSON_free(json_message);
     //*/
 
-    free_paillier_keychain(&g_paiKeys);
+final:
     BN_free(message);
     BN_free(pk_c);
     DSA_free(dsa);

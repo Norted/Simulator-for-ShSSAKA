@@ -58,12 +58,7 @@ unsigned int aka_serverSignVerify(BIGNUM *Y, struct ServerSign *server)
     unsigned char *ver = malloc(sizeof(char *) * BUFFER);
     struct ClientProof client;
     struct schnorr_Signature signature;
-    /* signature = malloc(sizeof(struct schnorr_Signature));
-    if (signature == NULL)
-    {
-        printf(" * SIGNATURE ALOCATION FAILED!\n");
-        goto end;
-    } */
+    
     init_clientproof(&client);
     init_schnorr_signature(&signature);
 
@@ -145,20 +140,15 @@ void init_aka_mem(struct aka_Keychain *keychain)
 
 void free_aka_mem(struct aka_Keychain *keychain)
 {
-    // keychain->ID = NULL;
     free_schnorr_keychain(keychain->keys);
     free(keychain->keys);
     return;
 }
 
-/*  Support function definition
- *  print to console the keychain variables
- */
-
 void aka_keyPrinter(struct aka_Keychain *key)
 {
     printf("ID: %d\n", key->ID);
-    printf("PK: %s\n", BN_bn2dec(key->keys->pk)); // FAILS -- not allocated???
+    printf("PK: %s\n", BN_bn2dec(key->keys->pk));
     printf("SK: %s\n", BN_bn2dec(key->keys->sk));
 
     return;

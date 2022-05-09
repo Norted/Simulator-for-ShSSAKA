@@ -12,6 +12,7 @@ unsigned int L(BIGNUM *u, BIGNUM *n, BIGNUM *res, BN_CTX *ctx);
 unsigned int l_or_a_computation(BIGNUM *p, BIGNUM *q, BIGNUM *lambda);
 unsigned int generate_rnd_paillier(BIGNUM *range, BIGNUM *gcd_chck, BIGNUM *random);
 unsigned int hash(BIGNUM *res, BIGNUM *Y, BIGNUM *t_s, BIGNUM *kappa);
+unsigned int ec_hash(EC_GROUP *group, BIGNUM *res, BIGNUM *Y, EC_POINT *t_s, EC_POINT *kappa);
 unsigned int rand_range(BIGNUM * rnd, BIGNUM * range);
 
 void init_serversign(struct ServerSign *server_sign);
