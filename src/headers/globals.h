@@ -63,14 +63,14 @@ struct ClientProof
 struct DeviceProof
 {
     BIGNUM *s_i;
-    EC_POINT *kappa_i;
+    const EC_POINT *kappa_i;
 };
 
 // SCHNORR STRUCTS
 struct schnorr_Keychain
 {
-    EC_GROUP *ec_group; //secp256k1
-    EC_KEY *keys;
+    const EC_GROUP *ec_group; //secp256k1
+    const EC_KEY *keys;
 };
 
 struct schnorr_Signature
@@ -92,8 +92,9 @@ struct aka_Keychain
 struct ssaka_Keychain
 {
     unsigned int ID;
-    struct schnorr_Keychain *keys;
-    EC_POINT *kappa;
+    BIGNUM *sk;
+    BIGNUM *pk;
+    BIGNUM *kappa;
 };
 
 // GLOBALS STRUCT
@@ -110,7 +111,7 @@ extern struct aka_Keychain g_serverKeys;
 extern struct aka_Keychain g_aka_clientKeys;
 extern unsigned int currentNumberOfDevices;
 extern struct paillier_Keychain g_paiKeys;
-extern BIGNUM *pk_c;
+extern EC_POINT *pk_c;
 
 // Threding and pre-computation
 pthread_t threads[NUM_THREADS];

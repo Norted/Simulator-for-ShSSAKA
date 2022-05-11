@@ -20,7 +20,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys) {
     }
 
     for (i = 0; i < currentNumberOfDevices; i++) {
-        err = rand_range(kappa_i[i], g_globals.params->q);
+        err = rand_range(kappa_i[i], paikeys->sk->q);
         if(err != 1)
         {
             printf(" * Generation of random KAPPA_%d failed! (paiShamir_distribution, paishamir)\n", i);
@@ -28,7 +28,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys) {
         }
 
         for(int j = 0; j < G_POLYDEGREE; j++) {
-            err = rand_range(d[i][j], g_globals.params->q);
+            err = rand_range(d[i][j], paikeys->sk->q);
             if(err != 1)
             {
                 printf(" * Generation of random D_%d (I: %d) failed! (paiShamir_distribution, paishamir)\n", j,i);
@@ -39,13 +39,13 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys) {
     
     // SHARE
     for (i = 0; i < currentNumberOfDevices; i++) {
-        err = paiShamir_get_ci(paikeys, kappa_i[i], d[i], g_ssaka_devicesKeys[i].keys->pk, c);
+        err = paiShamir_get_ci(paikeys, kappa_i[i], d[i], g_ssaka_devicesKeys[i].pk, c);
         if(err != 1)
         {
             printf(" * Get first C_%d failed! (paiShamir_distribution, paishamir)\n", i);
             goto end;
         }
-        err = paiShamir_get_ci(paikeys, kappa_i[(i+1)%(currentNumberOfDevices)], d[(i+1)%(currentNumberOfDevices)], g_ssaka_devicesKeys[i].keys->pk, cN_prime);
+        err = paiShamir_get_ci(paikeys, kappa_i[(i+1)%(currentNumberOfDevices)], d[(i+1)%(currentNumberOfDevices)], g_ssaka_devicesKeys[i].pk, cN_prime);
         if(err != 1)
         {
             printf(" * Get first CN' (%d) failed! (paiShamir_distribution, paishamir)\n", (i+1)%(currentNumberOfDevices));
@@ -55,7 +55,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys) {
         for (int j = 0; j < currentNumberOfDevices; j++) {
             if(j == i || j == (i+1)%(currentNumberOfDevices))
                 continue;
-            err = paiShamir_get_ci(paikeys, kappa_i[j], d[j], g_ssaka_devicesKeys[i].keys->pk, ci);
+            err = paiShamir_get_ci(paikeys, kappa_i[j], d[j], g_ssaka_devicesKeys[i].pk, ci);
             if(err != 1)
             {
                 printf(" * Get C_%d failed! (paiShamir_distribution, paishamir)\n", j);
@@ -68,7 +68,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys) {
                 goto end;
             }
         }
-        err = paiShamir_get_share(paikeys, cN_prime, c, g_ssaka_devicesKeys[i].keys->sk);
+        err = paiShamir_get_share(paikeys, cN_prime, c, g_ssaka_devicesKeys[i].sk);
         if(err != 1)
         {
             printf(" * Get SHARE (%d) failed! (paiShamir_distribution, paishamir)\n", i);
@@ -242,7 +242,7 @@ end:
     return err;
 }
 
-unsigned int paiShamir_interpolation(unsigned int *devices_list, unsigned int size_of_list, BIGNUM *secret) {
+unsigned int paiShamir_interpolation(unsigned int *devices_list, unsigned int size_of_list, BIGNUM *q, BIGNUM *secret) {
     unsigned int err = 0;
     if(size_of_list <= G_POLYDEGREE) {
         printf("There must be at least %d devices to reconstruct the secret!\n", G_POLYDEGREE+1);
@@ -259,13 +259,13 @@ unsigned int paiShamir_interpolation(unsigned int *devices_list, unsigned int si
     }
 
     for (int i = 0; i < size_of_list; i++) {
-        err = part_interpolation(devices_list, size_of_list, i, sk_i);
+        err = part_interpolation(devices_list, size_of_list, i, q, sk_i);
         if(err != 1)
         {
             printf(" * Interpolation of PART %d failed! (paiShamir_interpolation, paishamir)\n", i);
             goto end;
         }
-        err = BN_mod_add(secret, secret, sk_i, g_globals.params->q, ctx);
+        err = BN_mod_add(secret, secret, sk_i, q, ctx);
         if(err != 1)
         {
             printf(" * Addition of PART %d to the SECRET failed! (paiShamir_interpolation, paishamir)\n", i);
@@ -280,7 +280,7 @@ end:
     return err;
 }
 
-unsigned int part_interpolation(unsigned int *devices_list, unsigned int size_of_list, unsigned int current_device, BIGNUM *sk_i) {
+unsigned int part_interpolation(unsigned int *devices_list, unsigned int size_of_list, unsigned int current_device, BIGNUM *q, BIGNUM *sk_i) {
     unsigned int err = 0;
     BIGNUM *tmp_mul = BN_new();
     BIGNUM *sub = BN_new();
@@ -292,28 +292,28 @@ unsigned int part_interpolation(unsigned int *devices_list, unsigned int size_of
         goto end;
     }
     
-    BN_copy(sk_i, g_ssaka_devicesKeys[devices_list[current_device]].keys->sk);
+    BN_copy(sk_i, g_ssaka_devicesKeys[devices_list[current_device]].sk);
     for (int i = 0; i < size_of_list; i++) {
         if(current_device == i)
             continue;
-        err = BN_mod_sub(sub, g_ssaka_devicesKeys[devices_list[i]].keys->pk, g_ssaka_devicesKeys[devices_list[current_device]].keys->pk, g_globals.params->q, ctx);
+        err = BN_mod_sub(sub, g_ssaka_devicesKeys[devices_list[i]].pk, g_ssaka_devicesKeys[devices_list[current_device]].pk, q, ctx);
         if(err != 1)
         {
             printf(" * Computation of SUB (%d) failed! (part_interpolation, paishamir)\n", i);
             goto end;
         }
-        if(!BN_mod_inverse(inv, sub, g_globals.params->q, ctx))
+        if(!BN_mod_inverse(inv, sub, q, ctx))
         {
             printf(" * Computation of INV (%d) failed! (part_interpolation, paishamir)\n", i);
             goto end;
         }
-        err = BN_mod_mul(tmp_mul, g_ssaka_devicesKeys[devices_list[i]].keys->pk, inv, g_globals.params->q, ctx);
+        err = BN_mod_mul(tmp_mul, g_ssaka_devicesKeys[devices_list[i]].pk, inv, q, ctx);
         if(err != 1)
         {
             printf(" * Computation of TMP_MUL (%d) failed! (part_interpolation, paishamir)\n", i);
             goto end;
         }
-        err = BN_mod_mul(sk_i, sk_i, tmp_mul, g_globals.params->q, ctx);
+        err = BN_mod_mul(sk_i, sk_i, tmp_mul, q, ctx);
         if(err != 1)
         {
             printf(" * Computation of SK (%d) failed! (part_interpolation, paishamir)\n", i);

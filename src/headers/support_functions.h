@@ -12,14 +12,15 @@ unsigned int L(BIGNUM *u, BIGNUM *n, BIGNUM *res, BN_CTX *ctx);
 unsigned int l_or_a_computation(BIGNUM *p, BIGNUM *q, BIGNUM *lambda);
 unsigned int generate_rnd_paillier(BIGNUM *range, BIGNUM *gcd_chck, BIGNUM *random);
 unsigned int hash(BIGNUM *res, BIGNUM *Y, BIGNUM *t_s, BIGNUM *kappa);
-unsigned int ec_hash(EC_GROUP *group, BIGNUM *res, BIGNUM *Y, EC_POINT *t_s, EC_POINT *kappa);
-unsigned int rand_range(BIGNUM * rnd, BIGNUM * range);
+unsigned int ec_hash(const EC_GROUP *group, BIGNUM *res, BIGNUM *Y, EC_POINT *t_s, EC_POINT *kappa);
+unsigned int rand_range(BIGNUM * rnd, const BIGNUM * range);
+unsigned int rand_point(const EC_GROUP *group, EC_POINT *point);
 
-void init_serversign(EC_GROUP *group, struct ServerSign *server_sign);
+void init_serversign(const EC_GROUP *group, struct ServerSign *server_sign);
 void free_serversign(struct ServerSign *server_sign);
-void init_clientproof(EC_GROUP *group, struct ClientProof *client_proof);
+void init_clientproof(const EC_GROUP *group, struct ClientProof *client_proof);
 void free_clientproof(struct ClientProof *client_proof);
-void init_deviceproof(EC_GROUP *group, struct DeviceProof *device_proof);
+void init_deviceproof(const EC_GROUP *group, struct DeviceProof *device_proof);
 void free_deviceproof(struct DeviceProof *device_proof);
 
 void *thread_creation(void *threadid);

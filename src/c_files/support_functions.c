@@ -375,11 +375,11 @@ end:
     return err;
 }
 
-unsigned int ec_hash(EC_GROUP *group, BIGNUM *res, BIGNUM *Y, EC_POINT *t_s, EC_POINT *kappa)
+unsigned int ec_hash(const EC_GROUP *group, BIGNUM *res, BIGNUM *Y, EC_POINT *t_s, EC_POINT *kappa)
 {
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
-    if(!ctx)
+    if (!ctx)
     {
         printf(" * Failed to generate CTX! (ec_hash, support_functions)\n");
         return err;
@@ -415,7 +415,7 @@ end:
     return err;
 }
 
-unsigned int rand_range(BIGNUM *rnd, BIGNUM *range)
+unsigned int rand_range(BIGNUM *rnd, const BIGNUM *range)
 {
     unsigned int err = 0;
     BIGNUM *range_sub_one = BN_new();
@@ -435,10 +435,48 @@ unsigned int rand_range(BIGNUM *rnd, BIGNUM *range)
 
 end:
     BN_free(range_sub_one);
+    
     return err;
 }
 
-void init_serversign(EC_GROUP *group, struct ServerSign *server_sign)
+unsigned int rand_point(const EC_GROUP *group, EC_POINT *point)
+{
+    unsigned int err = 0;
+    BN_CTX *ctx = BN_CTX_secure_new();
+    if (!ctx)
+    {
+        printf(" * Failed to generate CTX! (rand_point, support_functions)\n");
+        return 0;
+    }
+    BIGNUM *order = BN_new();
+
+    err = EC_GROUP_get_order(group, order, ctx);
+    if (err != 1)
+    {
+        printf(" * Failed to get EC order! (rand_point, support_functions)\n");
+        goto end;
+    }
+    err = BN_rand(order, BN_num_bits(order), 0, 0);
+    if (err != 1)
+    {
+        printf(" * Generate random K failed! (rand_point, support_functions)\n");
+        goto end;
+    }
+    err = EC_POINT_mul(group, point, order, NULL, NULL, ctx);
+    if (err != 1)
+    {
+        printf(" * Failed to generate point R! (rand_point, support_functions)\n");
+        goto end;
+    }
+
+end:
+    BN_free(order);
+    BN_CTX_free(ctx);
+
+    return err;
+}
+
+void init_serversign(const EC_GROUP *group, struct ServerSign *server_sign)
 {
     server_sign->tau_s = BN_new();
     server_sign->kappa = EC_POINT_new(group);
@@ -452,7 +490,7 @@ void free_serversign(struct ServerSign *server_sign)
     return;
 }
 
-void init_clientproof(EC_GROUP *group, struct ClientProof *client_proof)
+void init_clientproof(const EC_GROUP *group, struct ClientProof *client_proof)
 {
     client_proof->tau_c = BN_new();
     client_proof->signature = (struct schnorr_Signature *)malloc(sizeof(struct schnorr_Signature));
@@ -470,7 +508,7 @@ void free_clientproof(struct ClientProof *client_proof)
     return;
 }
 
-void init_deviceproof(EC_GROUP *group, struct DeviceProof *device_proof)
+void init_deviceproof(const EC_GROUP *group, struct DeviceProof *device_proof)
 {
     device_proof->s_i = BN_new();
     device_proof->kappa_i = EC_POINT_new(group);

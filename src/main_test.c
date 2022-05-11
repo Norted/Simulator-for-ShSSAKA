@@ -18,7 +18,7 @@ struct aka_Keychain g_aka_clientKeys;
 extern struct ssaka_Keychain g_ssaka_devicesKeys[G_NUMOFDEVICES];
 
 struct paillier_Keychain g_paiKeys;
-BIGNUM *pk_c;
+EC_POINT *pk_c;
 
 // Globals
 struct globals g_globals;
@@ -42,45 +42,47 @@ int main(void)
     unsigned int return_code = 1;
     unsigned int err = 0;
 
-    BIGNUM *pk_c = BN_new();
-    BIGNUM * message = BN_new();
+    BIGNUM *message = BN_new();
     BN_dec2bn(&message, "123");
 
     g_globals.idCounter = 1;
     g_globals.keychain = (struct schnorr_Keychain *)malloc(sizeof(struct schnorr_Keychain));
-    init_schnorr_params(g_globals.keychain);
+
+    unsigned char *tmp_str = (char *)malloc(sizeof(char) * BUFFER);
+    range = BN_new();
+    sprintf(tmp_str, "%d", RANGE);
+    BN_dec2bn(&range, tmp_str);
 
     EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
-    if(group == NULL)
+    if (group == NULL)
     {
         printf(" * Failed to generate EC group!\n");
         return_code = 0;
-        goto final;
+        // goto final;
     }
     if (g_globals.keychain == NULL)
     {
         printf(" * KEYCHAIN ALOCATION FAILED!\n");
         return_code = 0;
-        goto final;
+        // goto final;
     }
-    err = gen_schnorr_params(group, g_globals.keychain);
+    err = gen_schnorr_keychain(group, g_globals.keychain);
     if (err != 1)
     {
         printf(" * Failed to generate Schnorr params!\n");
         return_code = 0;
-        goto final;
+        // goto final;
     }
-    
 
     /*  AKA-SETUP and AKA-CLIENT-REGISTER
      *      1) randomly initialize generator from GENERATORS
      *      2) generate keys for devices, client and server side
      */
 
-    /*  AKA test    
-
+    /*  AKA test
+        printf("\n\n---AKA test---\n");
         struct ServerSign server;
-        init_serversign(&server);
+        init_serversign(g_globals.keychain->ec_group, &server);
 
         err = aka_setup();
         if (err != 1)
@@ -103,103 +105,102 @@ int main(void)
 
         free_aka_mem(&g_aka_clientKeys);
         free_aka_mem(&g_serverKeys);
-        free_schnorr_params(g_globals.params);
-        free(g_globals.params);
+        free_schnorr_keychain(g_globals.keychain);
+        free(g_globals.keychain);
         free_serversign(&server);
     //*/
 
-    /*  SSAKA test  
-        printf("\n\n---SSAKA test---\n");
+    /*  SSAKA test  */
+    printf("\n\n---SSAKA test---\n");
 
-        unsigned int list_of_all_devs[currentNumberOfDevices-1];
-        for (int i = 1; i < currentNumberOfDevices; i++) {
-            list_of_all_devs[i-1] = i;
-        }
-        unsigned int size_all = sizeof(list_of_all_devs)/sizeof(unsigned int);
+    unsigned int list_of_all_devs[currentNumberOfDevices - 1];
+    for (int i = 1; i < currentNumberOfDevices; i++)
+    {
+        list_of_all_devs[i - 1] = i;
+    }
+    unsigned int size_all = sizeof(list_of_all_devs) / sizeof(unsigned int);
 
-        unsigned int list_of_used_devs[] = {1, 2};
-        unsigned int size_used = sizeof(list_of_used_devs)/sizeof(unsigned int);
+    unsigned int list_of_used_devs[] = {1, 2};
+    unsigned int size_used = sizeof(list_of_used_devs) / sizeof(unsigned int);
 
-        struct ServerSign server;
-        init_serversign(&server);
+    struct ServerSign server;
+    init_serversign(g_globals.keychain->ec_group, &server);
 
-        err = ssaka_setup();
-        if(err != 1)
-        {
-            printf(" * SSAKA setup failed!\n");
-            return_code = 0;
-            goto end;
-        }
+    err = ssaka_setup();
+    if (err != 1)
+    {
+        printf(" * SSAKA setup failed!\n");
+        return_code = 0;
+        goto end;
+    }
 
-        err = ssaka_ClientAddShare(3);
-        if(err != 1)
-        {
-            printf(" * AddShare failed!\n");
-            return_code = 0;
-            goto end;
-        }
-        printf("\n+++ ADDED! +++\n");
-        for (int j = 1; j < currentNumberOfDevices; j++) {
-            printf("--- DEVICE %d ---\n", j);
-            ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
-        }
+    /* err = ssaka_ClientAddShare(3);
+    if(err != 1)
+    {
+        printf(" * AddShare failed!\n");
+        return_code = 0;
+        goto end;
+    }
+    printf("\n+++ ADDED! +++\n");
+    for (int j = 1; j < currentNumberOfDevices; j++) {
+        printf("--- DEVICE %d ---\n", j);
+        ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
+    }
 
-        unsigned int remove[] = {1, 3};
-        unsigned int size_remove = sizeof(remove)/sizeof(unsigned int);
-        err = ssaka_ClientRevShare(remove, size_remove);
-        if(err != 1)
-        {
-            printf(" * RevShare failed!\n");
-            return_code = 0;
-            goto end;
-        }
+    unsigned int remove[] = {1, 3};
+    unsigned int size_remove = sizeof(remove)/sizeof(unsigned int);
+    err = ssaka_ClientRevShare(remove, size_remove);
+    if(err != 1)
+    {
+        printf(" * RevShare failed!\n");
+        return_code = 0;
+        goto end;
+    }
 
-        printf("\n--- REMOVED ---\n");
-        for (int j = 1; j < currentNumberOfDevices; j++) {
-            printf("--- DEVICE %d ---\n", j);
-            ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
-        }
+    printf("\n--- REMOVED ---\n");
+    for (int j = 1; j < currentNumberOfDevices; j++) {
+        printf("--- DEVICE %d ---\n", j);
+        ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
+    } */
 
-        /*err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
-        if(err != 1)
-        {
-            printf(" * SSAKA Server Sign Verify failed!\n");
-            return_code = 0;
-            goto end;
-        }
+    err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
+    if(err != 1)
+    {
+        printf(" * SSAKA Server Sign Verify failed!\n");
+        return_code = 0;
+        goto end;
+    }
 
-        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));/
+    printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
 
+    /* err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
+    if (err != 1)
+    {
+        printf(" * SSAKA Server Sign Verify failed!\n");
+        return_code = 0;
+        goto end;
+    }
 
-        err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
-        if(err != 1)
-        {
-            printf(" * SSAKA Server Sign Verify failed!\n");
-            return_code = 0;
-            goto end;
-        } 
-        
-        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
-       
-    
-    end:
-        printf("\n\nRETURN_CODE: %u\n", return_code);
+    printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s)); */
 
-        free_ssaka_mem();
-        free_schnorr_params(g_globals.params);
-        free(g_globals.params);
-        free_serversign(&server);
+end:
+    printf("\n\nRETURN_CODE: %u\n", return_code);
+
+    free_ssaka_mem();
+    free_schnorr_keychain(g_globals.keychain);
+    free(g_globals.keychain);
+    free_serversign(&server);
 
     //*/
 
-    /*  PAILLIER-SHAMIR test   
+    /*  PAILLIER-SHAMIR test    
     printf("\n\n---PAILLIER-SHAMIR test---\n");
 
     BIGNUM *sk_sum = BN_new();
     BIGNUM *sk_chck = BN_new();
-    BIGNUM *pk_chck = BN_new();
+    EC_POINT *pk_chck = EC_POINT_new(g_globals.keychain->ec_group);
     BN_CTX *ctx = BN_CTX_secure_new();
-    
+
 
     unsigned int list_of_used_devs[] = {2, 3, 1};
     unsigned int size_used = sizeof(list_of_used_devs) / sizeof(unsigned int);
@@ -230,12 +231,11 @@ int main(void)
     for (int i = 0; i < currentNumberOfDevices; i++)
     {
         g_ssaka_devicesKeys[i].ID = g_globals.idCounter++;
-        g_ssaka_devicesKeys[i].keys = (struct schnorr_Keychain *)malloc(sizeof(struct schnorr_Keychain));
-        init_schnorr_keychain(g_ssaka_devicesKeys[i].keys);
+        g_ssaka_devicesKeys[i].pk = BN_new();
+        g_ssaka_devicesKeys[i].sk = BN_new();
         g_ssaka_devicesKeys[i].kappa = BN_new();
 
-        err = rand_range(g_ssaka_devicesKeys[i].keys->pk, g_globals.params->q);
-        //err = ssaka_KeyGeneration(&g_ssaka_devicesKeys[i]);
+        err = rand_range(g_ssaka_devicesKeys[i].pk, EC_GROUP_get0_order(g_globals.keychain->ec_group));
         if (err != 1)
         {
             printf(" * Generation of a random public key failed!\n");
@@ -244,7 +244,6 @@ int main(void)
         }
     }
 
-    // err = _shamir_distribution(message);
     err = paiShamir_distribution(&p_keychain);
     if (err != 1)
     {
@@ -261,36 +260,37 @@ int main(void)
     }
     printf("\n"); /
 
-    err = paiShamir_interpolation(list_of_all_devs, currentNumberOfDevices, sk_chck);
-    err = BN_mod_exp(pk_chck, g_globals.params->g, sk_chck, g_globals.params->q, ctx);
+    err = paiShamir_interpolation(list_of_all_devs, currentNumberOfDevices, sk_chck, p_keychain.sk->q);
+    err = EC_POINT_mul(g_globals.keychain->ec_group, pk_chck, sk_chck, NULL, NULL, ctx);
     printf("\nRESULTS (ALL):\n|---> SK: %s\n|---> PK: %s\n",
-    BN_bn2dec(sk_chck), BN_bn2dec(pk_chck));
+        BN_bn2dec(sk_chck), EC_POINT_point2hex(g_globals.keychain->ec_group, pk_chck, POINT_CONVERSION_COMPRESSED, ctx));
 
-    err = paiShamir_interpolation(list_of_used_devs, size_used, sk_chck);
-    err = BN_mod_exp(pk_chck, g_globals.params->g, sk_chck, g_globals.params->q, ctx);
+    err = paiShamir_interpolation(list_of_used_devs, size_used, sk_chck, p_keychain.sk->q);
+    err = EC_POINT_mul(g_globals.keychain->ec_group, pk_chck, sk_chck, NULL, NULL, ctx);
     printf("\nRESULTS (PART):\n|---> SK: %s\n|---> PK: %s\n",
-    BN_bn2dec(sk_chck), BN_bn2dec(pk_chck));
+        BN_bn2dec(sk_chck), EC_POINT_point2hex(g_globals.keychain->ec_group, pk_chck, POINT_CONVERSION_COMPRESSED, ctx));
 
 end:
     printf("\nRETURN CODE: %u\n", return_code);
 
     BN_free(sk_chck);
     BN_free(sk_sum);
-    BN_free(pk_chck);
-    free_schnorr_params(g_globals.params);
-    free(g_globals.params);
+    EC_POINT_free(pk_chck);
+    free_schnorr_keychain(g_globals.keychain);
+    free(g_globals.keychain);
     free_paillier_keychain(&p_keychain);
 
     for (int i = 0; i < currentNumberOfDevices; i++)
     {
-        free_schnorr_keychain(g_ssaka_devicesKeys[i].keys);
-        free(g_ssaka_devicesKeys[i].keys);
+        BN_free(g_ssaka_devicesKeys[i].pk);
+        BN_free(g_ssaka_devicesKeys[i].sk);
+        BN_free(g_ssaka_devicesKeys[i].kappa);
     }
 
     BN_CTX_free(ctx);
     //*/
 
-    /*  SCHNORR test    */
+    /*  SCHNORR test    
         printf("\n\n---SCHNORR test---\n");
         int stop = 0;
 
@@ -299,8 +299,9 @@ end:
         struct schnorr_Keychain c_keychain;
         struct schnorr_Signature c_signature;
 
-        EC_POINT *s_kappa;
-        EC_POINT *c_kappa;
+        EC_POINT *s_kappa = EC_POINT_new(group);
+        EC_POINT *c_kappa = EC_POINT_new(group);
+        EC_POINT *zero = EC_POINT_new(group);
 
         BN_CTX *ctx = BN_CTX_secure_new();
         if(!ctx)
@@ -310,7 +311,7 @@ end:
             goto end;
         }
 
-        err = gen_schnorr_params(group, &s_keychain);
+        err = gen_schnorr_keychain(group, &s_keychain);
         if(err != 1)
         {
             printf(" * Failed to generate EC parameters!\n");
@@ -319,7 +320,7 @@ end:
         }
         init_schnorr_signature(group, &s_signature);
 
-        err = gen_schnorr_params(group, &c_keychain);
+        err = gen_schnorr_keychain(group, &c_keychain);
         if(err != 1)
         {
             printf(" * Failed to generate EC parameters!\n");
@@ -327,32 +328,27 @@ end:
             goto final;
         }
         init_schnorr_signature(group, &c_signature);
-        
-        /* EC_POINT *s_kappa = EC_POINT_new(s_keychain.ec_group);
-        err = EC_POINT_set_to_infinity(s_keychain.ec_group, s_kappa);
-        if(err != 1)
-        {
-            printf(" * Server KAPPA not set to infinity!\n");
-            return_code = 0;
-            goto end;
-        }
-        
-        EC_POINT *c_kappa = EC_POINT_new(c_keychain.ec_group);
-        err = EC_POINT_set_to_infinity(c_keychain.ec_group, c_kappa);
-        if(err != 1)
-        {
-            printf(" * Client KAPPA not set to infinity!\n");
-            return_code = 0;
-            goto end;
-        } */     
 
         while(stop <= 10) {
             err = 0;
-            s_kappa = EC_POINT_new(group);
-            c_kappa = EC_POINT_new(group);
-            
+            err = rand_point(group, s_kappa); // EC_POINT_new(group);
+            if(err != 1)
+            {
+                printf(" * Failed to set S_KAPPA!\n");
+                return_code = 0;
+                goto end;
+            }
+
+            err = rand_point(group, c_kappa); // EC_POINT_new(group);
+            if(err != 1)
+            {
+                printf(" * Failed to set C_KAPPA!\n");
+                return_code = 0;
+                goto end;
+            }
+
             printf("\n\n~ TRY N#%d ~\n\n--- SIGNATURE SERVER ---\n", stop);
-            err = schnorr_sign(&s_keychain, EC_KEY_get0_private_key(s_keychain.keys), message, s_kappa, &s_signature);
+            err = schnorr_sign(&s_keychain, EC_KEY_get0_private_key(s_keychain.keys), message, zero, &s_signature);
             if(err != 1)
             {
                 printf(" * EC Schnorr sign failed!\n");
@@ -364,7 +360,7 @@ end:
                 printf(" * Server signature created!\n    |--> SIG: %s\n", BN_bn2dec(s_signature.signature));
             }
 
-            err = schnorr_verify(&s_keychain, EC_KEY_get0_public_key(s_keychain.keys), message, s_kappa, &s_signature);
+            err = schnorr_verify(&s_keychain, EC_KEY_get0_public_key(s_keychain.keys), message, zero, &s_signature);
             if(err != 1)
             {
                 printf(" * EC Schnorr sign failed!\n");
@@ -377,7 +373,7 @@ end:
             }
 
             printf("\n--- SIGNATURE CLIENT ---\n");
-            BN_copy(c_signature.c_prime, s_signature.c_prime);
+            EC_POINT_copy(c_signature.c_prime, s_signature.c_prime);
             err = schnorr_sign(&c_keychain, EC_KEY_get0_private_key(c_keychain.keys), message, c_kappa, &c_signature);
             if(err != 1)
             {
@@ -481,7 +477,6 @@ end:
         printf("\n\nRETURN_CODE: %u\n", return_code);
 
         free_paillier_keychain(&p_keyring);
-        BN_free(message);
         BN_free(enc);
         BN_free(dec);
         BN_free(zero1);
@@ -504,7 +499,7 @@ end:
             }
             printf("I: %d\tHASH: %s\n", i+1, BN_bn2dec(res));
         }
-    
+
     end:
         BN_free(res);
         BN_free(one);
@@ -522,7 +517,7 @@ end:
         BN_dec2bn(&range, tmp_string);
 
         init_paillier_keychain(&g_paiKeys);
-        
+
         if (access(file_precomputed_noise, F_OK) || access(file_precomputed_message, F_OK))
         {
             if (!paillier_generate_keypair(&g_paiKeys))
@@ -558,7 +553,7 @@ end:
         else
             printf("FOUND!\n|---> SECRET: %s\n|---> RESULT: %s\n", BN_bn2dec(message), BN_bn2dec(result));
         json_message = parse_JSON(file_precomputed_message);
-    
+
     end:
         free_paillier_keychain(&g_paiKeys);
         BN_free(result);
@@ -570,7 +565,8 @@ final:
 
     EC_GROUP_free(group);
     BN_free(message);
-    BN_free(pk_c);
+    free(tmp_str);
+    BN_free(range);
 
     return return_code;
 }
