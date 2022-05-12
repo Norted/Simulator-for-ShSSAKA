@@ -16,6 +16,9 @@ paramgen
 openssl_bn
 schnorrs_signature
 
+# LOG files
+*.log
+
 # Prerequisites
 *.d
 
