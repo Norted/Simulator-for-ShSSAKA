@@ -1,8 +1,9 @@
 #ifndef __PAISHAMIR_H__
 #define __PAISHAMIR_H__
 
-#include <globals.h>
 #include <paillier_scheme.h>
+#include <support_functions.h>
+#include <globals.h>
 
 unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys);
 unsigned int paiShamir_get_ci(struct paillier_Keychain *paikeys, BIGNUM *kappa_i, BIGNUM *d[], BIGNUM *x, BIGNUM *ci);

@@ -4,9 +4,16 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys) {
     unsigned int err = 0;
     int i = 0;
 
+    BN_CTX *ctx = BN_CTX_secure_new();
+    if(!ctx)
+    {
+        printf(" * Failed to generate CTX! (paiShamir_distribution, paishamir)\n");
+        return 0;
+    }
     BIGNUM *c = BN_new();
     BIGNUM *ci = BN_new();
     BIGNUM *cN_prime = BN_new();
+    BIGNUM *order = BN_new();
     BIGNUM *kappa_i[currentNumberOfDevices];
     BIGNUM *d[currentNumberOfDevices][G_POLYDEGREE];
 
@@ -19,8 +26,15 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys) {
         }
     }
 
+    err = EC_GROUP_get_order(g_globals.keychain->ec_group, order, ctx);
+    if(err != 1)
+    {
+        printf(" * Failed to get the order of EC! (paiShamir_distribution, paishamir)\n");
+        goto end;
+    }
+
     for (i = 0; i < currentNumberOfDevices; i++) {
-        err = rand_range(kappa_i[i], paikeys->sk->q);
+        err = rand_range(kappa_i[i], g_range); //EC_GROUP_get0_order(g_globals.keychain->ec_group)
         if(err != 1)
         {
             printf(" * Generation of random KAPPA_%d failed! (paiShamir_distribution, paishamir)\n", i);
@@ -28,7 +42,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys) {
         }
 
         for(int j = 0; j < G_POLYDEGREE; j++) {
-            err = rand_range(d[i][j], paikeys->sk->q);
+            err = rand_range(d[i][j], EC_GROUP_get0_order(g_globals.keychain->ec_group));
             if(err != 1)
             {
                 printf(" * Generation of random D_%d (I: %d) failed! (paiShamir_distribution, paishamir)\n", j,i);
@@ -79,6 +93,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys) {
 end:
     BN_free(c);
     BN_free(ci);
+    BN_free(order);
     BN_free(cN_prime);
     for (i = 0; i < currentNumberOfDevices; i++)
     {
@@ -88,6 +103,7 @@ end:
             BN_free(d[i][j]);
         }
     }
+    BN_CTX_free(ctx);
 
     return err;
 }
@@ -107,32 +123,20 @@ unsigned int paiShamir_get_ci(struct paillier_Keychain *paikeys, BIGNUM *kappa_i
     unsigned char *str_i = (char*)malloc(sizeof(char) * BUFFER);
     BIGNUM *str_bn = BN_new();
     BIGNUM *ci_tmp = BN_new();
-    BIGNUM *tmp_r = BN_new();
     BIGNUM *precomp_message = BN_new();
     BIGNUM *precomp_noise = BN_new();
-    if(pre_message == 1)
-    {
-        BN_dec2bn(&precomp_message, "0");
-    }
-    else
-    {
-        err = find_value(json_message, kappa_i, precomp_message);
-    }
-
-    if(pre_noise == 1)
-    {
-        BN_dec2bn(&precomp_noise, "0");
-    }
-    else
-    {
-        err = rand_range(tmp_r, range);
-        err = find_value(json_noise, tmp_r, precomp_message);
-    }
 
     BN_CTX *ctx = BN_CTX_secure_new();
     if(!ctx)
     {
         printf(" * Failed to generate CTX! (paiShamir_get_ci, paishamir)\n");
+        goto end;
+    }
+    
+    err = set_precomps(kappa_i, precomp_message, precomp_noise);
+    if(err != 0)
+    {
+        printf(" * Failed to set pre-computed values! (paiShamir_get_ci, paishamir)\n");
         goto end;
     }
 
@@ -144,23 +148,11 @@ unsigned int paiShamir_get_ci(struct paillier_Keychain *paikeys, BIGNUM *kappa_i
     }
 
     for (i = 1; i <= G_POLYDEGREE; i++) {
-        if(pre_message == 0)
+        err = set_precomps(kappa_i, precomp_message, precomp_noise);
+        if(err != 0)
         {
-            BN_dec2bn(&precomp_message, "0");
-        }
-        else
-        {
-            err = find_value(json_message, kappa_i, precomp_message);
-        }
-        
-        if(pre_noise == 0)
-        {
-            BN_dec2bn(&precomp_noise, "0");
-        }
-        else
-        {
-            err = rand_range(tmp_r, range);
-            err = find_value(json_noise, tmp_r, precomp_message);
+            printf(" * Failed to set pre-computed values (%d)! (paiShamir_get_ci, paishamir)\n", i);
+            goto end;
         }
 
         err = paillier_encrypt(paikeys->pk, d[i-1], polynom[i], precomp_message, precomp_noise);
@@ -208,7 +200,6 @@ end:
     free(str_i);
     BN_free(str_bn);
     BN_free(ci_tmp);
-    BN_free(tmp_r);
     BN_free(precomp_message);
     BN_free(precomp_noise);
     BN_CTX_free(ctx);

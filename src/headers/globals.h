@@ -17,6 +17,7 @@
 #include <math.h>
 #include <limits.h>
 #include <string.h>
+#include <unistd.h>
 #include <openssl/bn.h>
 #include <openssl/sha.h>
 #include <openssl/ec.h>
@@ -69,7 +70,7 @@ struct DeviceProof
 // SCHNORR STRUCTS
 struct schnorr_Keychain
 {
-    const EC_GROUP *ec_group; //secp256k1
+    const EC_GROUP *ec_group;
     const EC_KEY *keys;
 };
 
@@ -115,9 +116,11 @@ extern EC_POINT *pk_c;
 
 // Threding and pre-computation
 pthread_t threads[NUM_THREADS];
-extern BIGNUM *range;
+extern BIGNUM *g_range;
+extern unsigned int paillier_inited;
 extern unsigned int pre_noise;
 extern unsigned int pre_message;
+extern const char *restrict file_keychain;
 extern const char *restrict file_precomputed_noise;
 extern const char *restrict file_precomputed_message;
 cJSON *json_noise;

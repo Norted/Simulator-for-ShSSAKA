@@ -4,7 +4,14 @@ unsigned int gen_schnorr_keychain(const EC_GROUP *group, struct schnorr_Keychain
 {
     unsigned int err = 0;
 
-    keychain->keys = EC_KEY_new_by_curve_name(NID_secp256k1);
+    OSSL_LIB_CTX *ctx = OSSL_LIB_CTX_new();
+    if(!ctx)
+    {
+        printf(" * Failed to generate CTX! (gen_schnorr_keychain, schnorr_signature)\n");
+        return 0;
+    }
+
+    keychain->keys = EC_KEY_new_by_curve_name_ex(ctx, NULL, NID_secp256k1);
     keychain->ec_group = group;
     err = EC_KEY_set_group(keychain->keys, keychain->ec_group);
     if (err != 1)
@@ -20,6 +27,8 @@ unsigned int gen_schnorr_keychain(const EC_GROUP *group, struct schnorr_Keychain
     }
 
 end:
+    OSSL_LIB_CTX_free(ctx);
+    
     return err;
 }
 

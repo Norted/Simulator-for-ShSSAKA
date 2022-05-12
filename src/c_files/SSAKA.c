@@ -26,12 +26,15 @@ unsigned int ssaka_setup()
     unsigned int fail = 0;
     init_ssaka_mem();
 
-    err = paillier_generate_keypair(&g_paiKeys);
-    if (err != 1)
+    if(paillier_inited == 0)
     {
-        printf(" * Failed to generate Paillier Keychain! (SSAKA, ssaka_setup)\n");
-        fail = 1;
-        goto end;
+        err = paillier_generate_keypair(&g_paiKeys);
+        if (err != 1)
+        {
+            printf(" * Failed to generate Paillier Keychain! (SSAKA, ssaka_setup)\n");
+            fail = 1;
+            goto end;
+        }
     }
 
     printf("---SERVER---\n");
@@ -145,20 +148,34 @@ end:
     return err;
 }
 
-unsigned int ssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int list_size)
+unsigned int ssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int rev_size)
 {
     int i = 0;
     unsigned int err = 0;
 
-    if (currentNumberOfDevices - list_size < (G_POLYDEGREE + 1))
+    if (currentNumberOfDevices - rev_size < (G_POLYDEGREE + 1))
     {
         printf("Must remain at least %d devices!\n", G_POLYDEGREE + 1);
         return 2;
     }
 
-    unsigned int index_list_size = currentNumberOfDevices - list_size;
-    unsigned int index_list[index_list_size];
+    unsigned int index_size = currentNumberOfDevices - rev_size;
+    unsigned int index_list[index_size];
     unsigned int counter = 0;
+
+    for (i; i < rev_size; i++)
+    {
+        if (rev_devices_list[i] == 0)
+        {
+            printf("Cannot remove client (0)!\n");
+            return 3;
+        }
+        g_ssaka_devicesKeys[rev_devices_list[i]].ID = 0;        
+        g_ssaka_devicesKeys[rev_devices_list[i]].pk = BN_new();
+        g_ssaka_devicesKeys[rev_devices_list[i]].sk = BN_new();
+        g_ssaka_devicesKeys[rev_devices_list[i]].kappa = BN_new();
+    }
+
     for (i = 0; i < currentNumberOfDevices; i++)
     {
         if (g_ssaka_devicesKeys[i].ID != 0)
@@ -167,22 +184,9 @@ unsigned int ssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int 
         }
     }
 
-    for (i = 0; i < list_size; i++)
-    {
-        if (rev_devices_list[i] == 0)
-        {
-            printf("Cannot remove client (0)!\n");
-            return 3;
-        }
-        g_ssaka_devicesKeys[rev_devices_list[i]].ID = 0;
-        g_ssaka_devicesKeys[rev_devices_list[i]].pk = BN_new();
-        g_ssaka_devicesKeys[rev_devices_list[i]].sk = BN_new();
-        g_ssaka_devicesKeys[rev_devices_list[i]].kappa = BN_new();
-    }
-
     for (i = 0; i < currentNumberOfDevices; i++)
     {
-        if (i < index_list_size)
+        if (i < index_size)
         {
             g_ssaka_devicesKeys[i].ID = g_ssaka_devicesKeys[index_list[i]].ID;
             BN_copy(g_ssaka_devicesKeys[i].pk, g_ssaka_devicesKeys[index_list[i]].pk);
@@ -199,7 +203,7 @@ unsigned int ssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int 
         }
     }
 
-    currentNumberOfDevices -= list_size;
+    currentNumberOfDevices -= rev_size;
     err = paiShamir_distribution(&g_paiKeys);
     if (err != 1)
     {
@@ -336,7 +340,6 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
         printf(" * Get ORDER failed! (ssaka_clientProofVerify, SSAKA)\n");
         goto end;
     }
-    
 
     /*  t_s_chck, sk_i  →   SSAKA-DEVICE-PROOFVERIFY(t_s_chck, sk_i)
      *
@@ -427,7 +430,7 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
 
     for (i = 0; i < size; i++)
     {
-        err = part_interpolation(interpolation_list, size + 1, i, order, sk_i); //g_paiKeys.sk->q
+        err = part_interpolation(interpolation_list, size + 1, i, order, sk_i);
         if (err != 1)
         {
             printf(" * %d part interpolation failed! (ssaka_clientProofVerify, SSAKA)\n", i);
@@ -454,7 +457,7 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
      *  +++++++++++++++++++++
      */
 
-    err = part_interpolation(interpolation_list, size + 1, size, order, sk_0); // g_paiKeys.sk->q
+    err = part_interpolation(interpolation_list, size + 1, size, order, sk_0);
     if (err != 1)
     {
         printf(" * Client's part interpolation failed! (ssaka_clientProofVerify, SSAKA)\n");
@@ -515,6 +518,7 @@ unsigned int _get_pk_c()
     unsigned int err = 0;
     unsigned int interpolation_list[currentNumberOfDevices];
     BIGNUM *secret = BN_new();
+    BIGNUM *order = BN_new();
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
     {
@@ -522,12 +526,14 @@ unsigned int _get_pk_c()
         return 0;
     }
 
+    EC_GROUP_get_order(g_globals.keychain->ec_group, order, ctx);
+
     for (int i = 0; i < currentNumberOfDevices; i++)
     {
         interpolation_list[i] = i;
     }
 
-    err = paiShamir_interpolation(interpolation_list, currentNumberOfDevices, g_paiKeys.sk->q, secret);
+    err = paiShamir_interpolation(interpolation_list, currentNumberOfDevices, order, secret);
     if (err != 1)
     {
         printf(" * Shamir interpolation failed! (SSAKA, _get_pk_c)\n");
@@ -543,6 +549,7 @@ unsigned int _get_pk_c()
 
 end:
     BN_free(secret);
+    BN_free(order);
     BN_CTX_free(ctx);
 
     return err;
@@ -551,7 +558,8 @@ end:
 void init_ssaka_mem()
 {
     init_aka_mem(&g_serverKeys);
-    init_paillier_keychain(&g_paiKeys);
+    if(paillier_inited == 0)
+        init_paillier_keychain(&g_paiKeys);
     for (int i = 0; i < currentNumberOfDevices; i++)
     {
         g_ssaka_devicesKeys[i].pk = BN_new();

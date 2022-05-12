@@ -292,7 +292,7 @@ end:
     return err;
 }
 
-unsigned int generate_rnd_paillier(BIGNUM *range, BIGNUM *gcd_chck, BIGNUM *random)
+unsigned int generate_rnd_paillier(BIGNUM *bn_range, BIGNUM *gcd_chck, BIGNUM *random)
 {
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
@@ -307,7 +307,7 @@ unsigned int generate_rnd_paillier(BIGNUM *range, BIGNUM *gcd_chck, BIGNUM *rand
     int i = 0;
     for (i; i < MAXITER; i++)
     {
-        err = rand_range(random, range);
+        err = rand_range(random, bn_range);
         if (err != 1)
         {
             printf(" * Generation of a random failed! (generate_rnd_paillier, support_functions)\n");
@@ -377,6 +377,7 @@ end:
 
 unsigned int ec_hash(const EC_GROUP *group, BIGNUM *res, BIGNUM *Y, EC_POINT *t_s, EC_POINT *kappa)
 {
+
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
@@ -415,12 +416,12 @@ end:
     return err;
 }
 
-unsigned int rand_range(BIGNUM *rnd, const BIGNUM *range)
+unsigned int rand_range(BIGNUM *rnd, const BIGNUM *bn_range)
 {
     unsigned int err = 0;
     BIGNUM *range_sub_one = BN_new();
 
-    err = BN_sub(range_sub_one, range, BN_value_one());
+    err = BN_sub(range_sub_one, bn_range, BN_value_one());
     if (err != 1)
     {
         printf(" * Substraction of one failed! (rand_range, support_functions)\n");
@@ -435,7 +436,7 @@ unsigned int rand_range(BIGNUM *rnd, const BIGNUM *range)
 
 end:
     BN_free(range_sub_one);
-    
+
     return err;
 }
 
@@ -472,6 +473,51 @@ unsigned int rand_point(const EC_GROUP *group, EC_POINT *point)
 end:
     BN_free(order);
     BN_CTX_free(ctx);
+
+    return err;
+}
+
+unsigned int set_precomps(BIGNUM *message, BIGNUM *p_message, BIGNUM *p_noise)
+{
+    unsigned int err = 0;
+    BIGNUM *tmp_r = BN_new();
+
+    if(pre_message == 0)
+    {
+        BN_dec2bn(&p_message, "0");
+    }
+    else
+    {
+        err = find_value(json_message, message, p_message);
+        if(err != 0)
+        {
+            printf(" * Find pre-computed value of KAPPA_I failed! (paiShamir_get_ci, paishamir)\n");
+            goto end;
+        }
+    }
+    
+    if(pre_noise == 0)
+    {
+        BN_dec2bn(&p_noise, "0");
+    }
+    else
+    {
+        err = rand_range(tmp_r, g_range);
+        if(err != 1)
+        {
+            printf(" * Generation of random failed! (paiShamir_get_ci, paishamir)\n");
+            goto end;
+        }
+        err = find_value(json_noise, tmp_r, p_noise);
+        if(err != 0)
+        {
+            printf(" * Find pre-computed value of generated random failed! (paiShamir_get_ci, paiShamir)\n");
+            goto end;
+        }
+    }
+
+end:
+    BN_free(tmp_r);
 
     return err;
 }
@@ -523,28 +569,28 @@ void free_deviceproof(struct DeviceProof *device_proof)
 }
 
 void *thread_creation(void *threadid)
-{ // precomputation type: 0 ... noise, 1 ... message
+{ // precomputation type 1 ... message, 2 ... noise
     unsigned int err = 0;
     long tid;
     tid = (long)threadid;
 
     if (tid == 0)
     {
-        err = precomputation(file_precomputed_noise, &g_paiKeys, range, 0);
-        if (err != 0)
-        {
-            printf(" * Noise precomputation failed!\n");
-            pthread_exit(NULL);
-        }
-    }
-    else if (tid == 1)
-    {
-        err = precomputation(file_precomputed_message, &g_paiKeys, range, 1);
+        err = precomputation(file_precomputed_message, &g_paiKeys, RANGE, 1);
         if (err != 0)
         {
             printf(" * Message precomputation failed!\n");
             pthread_exit(NULL);
         }
+    }
+    else if (tid == 1)
+    {
+        err = precomputation(file_precomputed_noise, &g_paiKeys, RANGE, 2);
+        if (err != 0)
+        {
+            printf(" * Noise precomputation failed!\n");
+            pthread_exit(NULL);
+        }        
     }
     else
     {
@@ -661,22 +707,8 @@ void read_keys(const char *restrict file_name, struct paillier_Keychain *keychai
     return;
 }
 
-int precomputation(const char *restrict file_name, struct paillier_Keychain *keychain, BIGNUM *range, unsigned int type)
-{ // type 0 ... message, 1 ... noise
-    if (type == 0)
-    {
-        printf(" * Message precomputation STARTED ... \n");
-    }
-    else if (type == 1)
-    {
-        printf(" * Noise precomputation STARTED ... \n");
-    }
-    else
-    {
-        printf(" * Unknown precomputation type ... (%d)\n", type);
-        return 1;
-    }
-
+int write_keys(const char *restrict file_name, struct paillier_Keychain *keychain)
+{
     unsigned int err = 0;
     FILE *file = fopen(file_name, "w");
 
@@ -728,27 +760,6 @@ int precomputation(const char *restrict file_name, struct paillier_Keychain *key
     }
     cJSON_AddItemToObject(json, "sk", sk_values);
 
-    cJSON *precomp = cJSON_CreateArray();
-    if (type == 0)
-    {
-        precomp = message_precomp(range, keychain->pk->g, keychain->pk->n_sq);
-    }
-    else
-    {
-        precomp = noise_precomp(range, keychain->pk->n, keychain->pk->n_sq);
-    }
-
-    cJSON_AddItemToObject(json, "precomputed_values", precomp);
-
-    if (type == 0)
-    {
-        printf(" * Message precomputation DONE!\n");
-    }
-    else if (type == 1)
-    {
-        printf(" * Noise precomputation DONE!\n");
-    }
-
     char *output = cJSON_Print(json);
     if (output == NULL)
     {
@@ -767,7 +778,71 @@ end:
     return fclose(file);
 }
 
-cJSON *message_precomp(BIGNUM *range, BIGNUM *base, BIGNUM *mod)
+int precomputation(const char *restrict file_name, struct paillier_Keychain *keychain, unsigned int int_range, unsigned int type)
+{ // type 1 ... message, 2 ... noise
+    if (type == 1)
+    {
+        printf("\t * Message precomputation STARTED ... \n");
+    }
+    else if (type == 2)
+    {
+        printf("\t * Noise precomputation STARTED ... \n");
+    }
+    else
+    {
+        printf("\t * Unknown precomputation type ... (%d)\n", type);
+        return 1;
+    }
+
+    unsigned int err = 0;
+    FILE *file = fopen(file_name, "w");
+
+    cJSON *json = cJSON_CreateObject();
+    if (json == NULL)
+    {
+        goto end;
+    }
+    
+    cJSON *precomp = cJSON_CreateArray();
+    if(type == 1)
+    {
+        precomp = message_precomp(int_range, keychain->pk->g, keychain->pk->n_sq);
+    }
+    else if (type == 2)
+    {
+        precomp = noise_precomp(int_range, keychain->pk->n, keychain->pk->n_sq);
+    }
+    
+    cJSON_AddItemToObject(json, "precomputed_values", precomp);
+
+    if (type == 1)
+    {
+        printf("\t * Message precomputation DONE!\n");
+    }
+    else if (type == 2)
+    {
+        printf("\t * Noise precomputation DONE!\n");
+    }
+
+    char *output = cJSON_Print(json);
+    if (output == NULL)
+    {
+        printf("\t* Failed to print json.\n");
+    }
+
+    if(!fputs(output, file))
+    {
+        printf("\t * Failed to write to file %s!\n", file_name);
+        return 0;
+    }
+
+end:
+    cJSON_Delete(json);
+
+    return fclose(file);
+}
+
+cJSON *message_precomp(unsigned int int_range, BIGNUM *base, BIGNUM *mod)
 {
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
@@ -785,15 +860,14 @@ cJSON *message_precomp(BIGNUM *range, BIGNUM *base, BIGNUM *mod)
 
     cJSON *values = NULL;
     unsigned char string[BUFFER];
-    for (int i = 0; i < atoi(BN_bn2dec(range)); i++)
+    for (int i = 1; i < int_range; i++)
     {
         sprintf(string, "%d", i);
         BN_dec2bn(&tmp_value, string);
         if (!BN_mod_exp(tmp_result, base, tmp_value, mod, ctx))
         {
-            printf(" * Precomputation STOPPED at %s!\n", BN_bn2dec(tmp_value));
-            precomp = NULL; //-1;
-            goto end;
+            printf("\tPrecomputation STOPPED at %s!\n", BN_bn2dec(tmp_value));
+            return -1;
         }
 
         values = cJSON_CreateObject();
@@ -821,7 +895,7 @@ end:
     return precomp;
 }
 
-cJSON *noise_precomp(BIGNUM *range, BIGNUM *exp_value, BIGNUM *mod)
+cJSON *noise_precomp(unsigned int int_range, BIGNUM *exp_value, BIGNUM *mod)
 {
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
@@ -838,16 +912,15 @@ cJSON *noise_precomp(BIGNUM *range, BIGNUM *exp_value, BIGNUM *mod)
     }
 
     cJSON *values = NULL;
-    const unsigned char string[BUFFER];
-    for (int i = 1; i < atoi(BN_bn2dec(range)); i++)
+    unsigned char string[BUFFER];
+    for (int i = 1; i < int_range; i++)
     {
-        sprintf((unsigned char *)string, "%d", i);
-        BN_dec2bn(&tmp_value, (const char *)string);
+        sprintf(string, "%d", i);
+        BN_dec2bn(&tmp_value, string);
         if (!BN_mod_exp(tmp_result, tmp_value, exp_value, mod, ctx))
         {
-            printf(" * Precomputation STOPPED at %s!\n", BN_bn2dec(tmp_value));
-            precomp = NULL; //-1;
-            goto end;
+            printf("\tPrecomputation STOPPED at %s!\n", BN_bn2dec(tmp_value));
+            return -1;
         }
 
         values = cJSON_CreateObject();

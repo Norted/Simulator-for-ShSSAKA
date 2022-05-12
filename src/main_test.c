@@ -21,18 +21,19 @@ struct paillier_Keychain g_paiKeys;
 EC_POINT *pk_c;
 
 // Globals
+BIGNUM *g_range;
 struct globals g_globals;
 unsigned int currentNumberOfDevices = 4;
-DSA *dsa;
 
 // Threding and pre-computation globals
-BIGNUM *range;
+unsigned int paillier_inited = 0;
 unsigned int pre_noise = 0;
 unsigned int pre_message = 0;
 
 // File names
-const char *restrict file_precomputed_noise = "../precomputed_values/precomputation_noise.json";
-const char *restrict file_precomputed_message = "../precomputed_values/precomputation_message.json";
+const char *restrict file_keychain = "keychain.json";
+const char *restrict file_precomputed_noise = "precomputed_values/precomputation_noise.json";
+const char *restrict file_precomputed_message = "precomputed_values/precomputation_message.json";
 
 unsigned int test_homomorphy();
 unsigned int test_paiShamir();
@@ -49,9 +50,9 @@ int main(void)
     g_globals.keychain = (struct schnorr_Keychain *)malloc(sizeof(struct schnorr_Keychain));
 
     unsigned char *tmp_str = (char *)malloc(sizeof(char) * BUFFER);
-    range = BN_new();
+    g_range = BN_new();
     sprintf(tmp_str, "%d", RANGE);
-    BN_dec2bn(&range, tmp_str);
+    BN_dec2bn(&g_range, tmp_str);
 
     EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
     if (group == NULL)
@@ -126,6 +127,9 @@ int main(void)
     struct ServerSign server;
     init_serversign(g_globals.keychain->ec_group, &server);
 
+    pre_message = 1;
+    pre_noise = 1;
+    
     err = ssaka_setup();
     if (err != 1)
     {
@@ -134,7 +138,7 @@ int main(void)
         goto end;
     }
 
-    /* err = ssaka_ClientAddShare(3);
+    err = ssaka_ClientAddShare(3);
     if(err != 1)
     {
         printf(" * AddShare failed!\n");
@@ -161,9 +165,9 @@ int main(void)
     for (int j = 1; j < currentNumberOfDevices; j++) {
         printf("--- DEVICE %d ---\n", j);
         ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
-    } */
+    }
 
-    err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
+    /* err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
     if(err != 1)
     {
         printf(" * SSAKA Server Sign Verify failed!\n");
@@ -171,9 +175,9 @@ int main(void)
         goto end;
     }
 
-    printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
+    printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s)); */
 
-    /* err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
+    err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
     if (err != 1)
     {
         printf(" * SSAKA Server Sign Verify failed!\n");
@@ -181,7 +185,7 @@ int main(void)
         goto end;
     }
 
-    printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s)); */
+    printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
 
 end:
     printf("\n\nRETURN_CODE: %u\n", return_code);
@@ -198,9 +202,9 @@ end:
 
     BIGNUM *sk_sum = BN_new();
     BIGNUM *sk_chck = BN_new();
+    BIGNUM *order = BN_new();
     EC_POINT *pk_chck = EC_POINT_new(g_globals.keychain->ec_group);
-    BN_CTX *ctx = BN_CTX_secure_new();
-
+    
 
     unsigned int list_of_used_devs[] = {2, 3, 1};
     unsigned int size_used = sizeof(list_of_used_devs) / sizeof(unsigned int);
@@ -209,6 +213,20 @@ end:
     for (unsigned int i = 0; i < currentNumberOfDevices; i++)
     {
         list_of_all_devs[i] = i;
+    }
+
+    BN_CTX *ctx = BN_CTX_secure_new();
+    if(!ctx)
+    {
+        printf(" * Failed to generate CTX!\n");
+        goto end;
+    }
+
+    err = EC_GROUP_get_order(g_globals.keychain->ec_group, order, ctx);
+    if(err != 1)
+    {
+        printf(" * Failed to get the EC order!\n");
+        goto end;
     }
 
     struct paillier_Keychain p_keychain;
@@ -260,12 +278,12 @@ end:
     }
     printf("\n"); /
 
-    err = paiShamir_interpolation(list_of_all_devs, currentNumberOfDevices, sk_chck, p_keychain.sk->q);
+    err = paiShamir_interpolation(list_of_all_devs, currentNumberOfDevices, p_keychain.sk->q, sk_chck); //order
     err = EC_POINT_mul(g_globals.keychain->ec_group, pk_chck, sk_chck, NULL, NULL, ctx);
     printf("\nRESULTS (ALL):\n|---> SK: %s\n|---> PK: %s\n",
         BN_bn2dec(sk_chck), EC_POINT_point2hex(g_globals.keychain->ec_group, pk_chck, POINT_CONVERSION_COMPRESSED, ctx));
 
-    err = paiShamir_interpolation(list_of_used_devs, size_used, sk_chck, p_keychain.sk->q);
+    err = paiShamir_interpolation(list_of_used_devs, size_used, p_keychain.sk->q, sk_chck); //order
     err = EC_POINT_mul(g_globals.keychain->ec_group, pk_chck, sk_chck, NULL, NULL, ctx);
     printf("\nRESULTS (PART):\n|---> SK: %s\n|---> PK: %s\n",
         BN_bn2dec(sk_chck), EC_POINT_point2hex(g_globals.keychain->ec_group, pk_chck, POINT_CONVERSION_COMPRESSED, ctx));
@@ -275,6 +293,7 @@ end:
 
     BN_free(sk_chck);
     BN_free(sk_sum);
+    BN_free(order);
     EC_POINT_free(pk_chck);
     free_schnorr_keychain(g_globals.keychain);
     free(g_globals.keychain);
@@ -416,17 +435,17 @@ end:
     /*  PAILLIER test   
         printf("\n\n---PAILLIER test---\n");
 
+        cJSON *json_noise = cJSON_CreateObject();
+        cJSON *json_message = cJSON_CreateObject();
+
         BIGNUM *enc = BN_new();
         BIGNUM *dec = BN_new();
 
-        BIGNUM *zero1 = BN_new();
-        BIGNUM *zero2 = BN_new();
-        BN_dec2bn(&zero1, "0");
-        BN_dec2bn(&zero2, "0");
+        BIGNUM *p_message = BN_new();
+        BIGNUM *p_noise = BN_new();
 
-        struct paillier_Keychain p_keyring;
-        init_paillier_keychain(&p_keyring);
-        if(&p_keyring == NULL)
+        init_paillier_keychain(&g_paiKeys);
+        if(&g_paiKeys == NULL)
         {
             printf(" * Failed to init PAILLIER KEYCHAIN!\n");
             return_code = 0;
@@ -434,29 +453,56 @@ end:
         }
 
         // INIT KEYS
-        err = paillier_generate_keypair(&p_keyring);
-        if(err != 1)
+        if (access(file_keychain, F_OK) || access(file_precomputed_noise, F_OK) || access(file_precomputed_message, F_OK))
         {
-            printf(" * Failed to generate Paillier Keypair!\n");
-            return_code = 0;
-            goto end;
+            err = paillier_generate_keypair(&g_paiKeys);
+            if(err != 1)
+            {
+                printf(" * Keychain generation failed!\n");
+                return 0;
+            }
+
+            err = write_keys(file_keychain, &g_paiKeys);
+            if(err != 0)
+            {
+                printf(" * Save keychain to file failed!\n");
+                return 0;
+            }
+
+            threaded_precomputation();
+            
+            for (int i = 0; i < NUM_THREADS; i++)
+            {
+                pthread_join(threads[i], NULL);
+            }
         }
-        printf("ERR: %u\nKEYS:\n|--> L: %s\n|--> MI: %s\n|--> N: %s\n|--> N_SQ: %s\n|--> G: %s\n", err, BN_bn2dec(p_keyring.sk->lambda),
-            BN_bn2dec(p_keyring.sk->mi), BN_bn2dec(p_keyring.pk->n), BN_bn2dec(p_keyring.pk->n_sq), BN_bn2dec(p_keyring.pk->g));
+        else
+        {
+            read_keys(file_keychain, &g_paiKeys);
+        }
+
+        printf("ERR: %u\nKEYS:\n|--> L: %s\n|--> MI: %s\n|--> N: %s\n|--> N_SQ: %s\n|--> G: %s\n", err, BN_bn2dec(g_paiKeys.sk->lambda),
+            BN_bn2dec(g_paiKeys.sk->mi), BN_bn2dec(g_paiKeys.pk->n), BN_bn2dec(g_paiKeys.pk->n_sq), BN_bn2dec(g_paiKeys.pk->g));
         printf("\n\nSECRET: %s\n", BN_bn2dec(message));
 
-        // ENCRYPTION
-        err = paillier_encrypt(p_keyring.pk, message, enc, zero1, zero2);
+        json_noise = parse_JSON(file_precomputed_noise);
+        json_message = parse_JSON(file_precomputed_message);
+
+        
+        printf("\nNO PRECOMPUTATION:\n");
+        pre_message = 0;
+        pre_noise = 0;
+        err = set_precomps(message, p_message, p_noise);
+        printf(">> PM: %s\n>> PN: %s\n", BN_bn2dec(p_message), BN_bn2dec(p_noise));
+        
+        err = paillier_encrypt(g_paiKeys.pk, message, enc, p_message, p_noise);
         if(err != 1)
         {
             printf(" * Failed to process the encryption with Paillier!\n");
             return_code = 0;
             goto end;
         }
-        printf("ENC: %s\n", BN_bn2dec(enc));
-
-        // DECRYPTION
-        err = paillier_decrypt(&p_keyring, enc, dec);
+        err = paillier_decrypt(&g_paiKeys, enc, dec);
         if(err != 1)
         {
             printf(" * Failed to process the decryption with Paillier!\n");
@@ -464,6 +510,76 @@ end:
             goto end;
         }
         printf("DEC: %s\n", BN_bn2dec(dec));
+
+
+        printf("\nMESSAGE PRECOMPUTATION:\n");
+        pre_message = 1;
+        pre_noise = 0;
+        err = set_precomps(message, p_message, p_noise);
+        printf(">> PM: %s\n>> PN: %s\n", BN_bn2dec(p_message), BN_bn2dec(p_noise));
+
+        err = paillier_encrypt(g_paiKeys.pk, message, enc, p_message, p_noise);
+        if(err != 1)
+        {
+            printf(" * Failed to process the encryption with Paillier!\n");
+            return_code = 0;
+            goto end;
+        }
+        err = paillier_decrypt(&g_paiKeys, enc, dec);
+        if(err != 1)
+        {
+            printf(" * Failed to process the decryption with Paillier!\n");
+            return_code = 0;
+            goto end;
+        }
+        printf("DEC: %s\n", BN_bn2dec(dec));
+
+
+        printf("\nNOISE PRECOMPUTATION:\n");
+        pre_message = 0;
+        pre_noise = 1;
+        err = set_precomps(message, p_message, p_noise);
+        printf(">> PM: %s\n>> PN: %s\n", BN_bn2dec(p_message), BN_bn2dec(p_noise));
+
+        err = paillier_encrypt(g_paiKeys.pk, message, enc, p_message, p_noise);
+        if(err != 1)
+        {
+            printf(" * Failed to process the encryption with Paillier!\n");
+            return_code = 0;
+            goto end;
+        }
+        err = paillier_decrypt(&g_paiKeys, enc, dec);
+        if(err != 1)
+        {
+            printf(" * Failed to process the decryption with Paillier!\n");
+            return_code = 0;
+            goto end;
+        }
+        printf("DEC: %s\n", BN_bn2dec(dec));
+
+
+        printf("\nBOTH PRECOMPUTATION:\n");
+        pre_message = 1;
+        pre_noise = 1;
+        err = set_precomps(message, p_message, p_noise); 
+        printf(">> PM: %s\n>> PN: %s\n", BN_bn2dec(p_message), BN_bn2dec(p_noise));
+
+        err = paillier_encrypt(g_paiKeys.pk, message, enc, p_message, p_noise);
+        if(err != 1)
+        {
+            printf(" * Failed to process the encryption with Paillier!\n");
+            return_code = 0;
+            goto end;
+        }
+        err = paillier_decrypt(&g_paiKeys, enc, dec);
+        if(err != 1)
+        {
+            printf(" * Failed to process the decryption with Paillier!\n");
+            return_code = 0;
+            goto end;
+        }
+        printf("DEC: %s\n", BN_bn2dec(dec));
+
 
         printf("\n\n---PAILLIER HOMOMORPHY test---\n");
         err = test_homomorphy();
@@ -476,11 +592,11 @@ end:
     end:
         printf("\n\nRETURN_CODE: %u\n", return_code);
 
-        free_paillier_keychain(&p_keyring);
+        free_paillier_keychain(&g_paiKeys);
         BN_free(enc);
         BN_free(dec);
-        BN_free(zero1);
-        BN_free(zero2);
+        BN_free(p_message);
+        BN_free(p_noise);
     //*/
 
     /*  HASH test   
@@ -508,13 +624,13 @@ end:
 
     /*  PRE-COMPUTATION test    
         BIGNUM *result = BN_new();
-        range = BN_new();
+        g_range = BN_new();
         cJSON *json_noise = cJSON_CreateObject();
         cJSON *json_message = cJSON_CreateObject();
         unsigned char *tmp_string = (char*)malloc(sizeof(char)*BUFFER/2);
 
         sprintf(tmp_string, "%d", RANGE);
-        BN_dec2bn(&range, tmp_string);
+        BN_dec2bn(&g_range, tmp_string);
 
         init_paillier_keychain(&g_paiKeys);
 
@@ -566,7 +682,7 @@ final:
     EC_GROUP_free(group);
     BN_free(message);
     free(tmp_str);
-    BN_free(range);
+    BN_free(g_range);
 
     return return_code;
 }
