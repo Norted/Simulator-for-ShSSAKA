@@ -7,12 +7,13 @@
         "gtk.h": "c",
         "stdlib.h": "c",
         "sha.h": "c",
-        "openssl_bn.h": "c",
+        "bn.h": "c",
         "limits.h": "c",
         "schnorrs_signature.h": "c",
+        "schnorrs_signature_EC.h": "c",
         "paishamir.h": "c",
-        "cjson.h": "c",
-        "globals.h": "c",
-        "database_cjson.h": "c"
+        "paillier_scheme.h": "c",
+        "support_functions.h": "c",
+        "globals.h": "c"
     }
 }

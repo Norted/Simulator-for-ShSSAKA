@@ -202,3 +202,23 @@ GTK_BUTTONS_CLOSE {
     font-size: 13px;
     border-radius: 1px;
 }
+
+#checkButton:checked {
+    background-color: black;
+    color: red;
+    font-family: 'Courier New', Courier, monospace;
+    font-style: normal;
+    font-weight: bold;
+    font-size: 12px;
+    border-radius: 5px;
+}
+
+#checkButton {
+    background-color: black;
+    color: red;
+    font-family: 'Courier New', Courier, monospace;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 12px;
+    border-radius: 5px;
+}

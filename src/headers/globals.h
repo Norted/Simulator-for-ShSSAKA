@@ -1,123 +1,138 @@
 #ifndef __GLOBALS_H__
 #define __GLOBALS_H__
 
-#define G_NUMOFDEVICES      10
-#define G_POLYDEGREE        2
-#define G_GENERATORSLEN     6
-#define G_MAXRANDOMNUMBER   100
-#define G_MINRANDOMNUMBER   1
-#define BITS                256
-#define BUFFER              BITS*4
-#define BIG_BUFFER          BITS*32
-#define BUFFER100           100
-#define MAXITER             10000
-#define RANGE               100//000
-#define NUM_THREADS         2
+// ======== MACROS ======================================================================
+#define NUM_THREADS 2
+#define G_NUMOFDEVICES 10
+#define G_POLYDEGREE 2
+#define BUFFER 512 // 512, 1024
+#define BITS 512   // 512, 1024, 1500, 2048
+#define MAXITER 10000
+#define RANGE 1000
 
-// LIBRARIES
+// ======== COMMON LIBRARIES ============================================================
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
 #include <limits.h>
 #include <string.h>
-#include <unistd.h>
 #include <openssl/bn.h>
 #include <openssl/sha.h>
 #include <openssl/dsa.h>
-#include <openssl_bn.h>
+#include <openssl/ec.h>
+#include <openssl/obj_mac.h>
 #include <cjson/cJSON.h>
 
-// PAilLIER
-struct paillierPrivateKey {
-    unsigned char l[BUFFER];
-    unsigned char m[BUFFER];
+// ======== STRUCTS =====================================================================
+// PAILLIER STRUCTS
+struct paillier_PrivateKey
+{
+    BIGNUM *p;
+    BIGNUM *q;
+    BIGNUM *lambda;
+    BIGNUM *mi; // modular multiplicative inverse (L(g^lambda mod n^2))^(-1) mod n
 };
 
-struct paillierPublicKey {
-    unsigned char n[BUFFER];
-    unsigned char n_sq[BUFFER];
-    unsigned char g[BUFFER];
+struct paillier_PublicKey
+{
+    BIGNUM *n;
+    BIGNUM *n_sq;
+    BIGNUM *g;
 };
 
-struct paillierKeychain {
-    struct paillierPrivateKey sk;
-    struct paillierPublicKey pk;
+struct paillier_Keychain
+{
+    struct paillier_PrivateKey *sk;
+    struct paillier_PublicKey *pk;
 };
 
-// SCHNORR SIGNATURE
-struct SchnorrParams {
-    unsigned char p[BUFFER];
-    unsigned char q[BUFFER];
-    unsigned char g[BUFFER];
+// SCHNORR STRUCTS
+struct schnorr_Params
+{
+    BIGNUM *p;
+    BIGNUM *q;
+    BIGNUM *g;
 };
 
-struct SchnorrSignature {
-    unsigned char hash[BUFFER];
-    unsigned char signature[BUFFER];
-    unsigned char r[BUFFER];
-    unsigned char c_prime[BUFFER];
+struct schnorr_Signature
+{
+    BIGNUM *hash;
+    BIGNUM *signature;
+    BIGNUM *r;
+    BIGNUM *c_prime;
 };
 
-struct SchnorrKeychain {
-    unsigned char pk[BUFFER];
-    unsigned char sk[BUFFER];
+struct schnorr_Keychain
+{
+    BIGNUM *pk;
+    BIGNUM *sk;
 };
 
-// AKA
-struct aka_Keychain {
-    struct SchnorrKeychain *keys;
-    unsigned char ID[BUFFER];
+// SIGNS & PROOFS STRUCTS
+struct ServerSign
+{
+    BIGNUM *tau_s;
+    BIGNUM *kappa;
 };
 
-// SSAKA
-struct ssaka_Keychain {
-    unsigned char ID[BUFFER];
-    struct SchnorrKeychain *keys;
-    unsigned char kappa[BUFFER];
+struct ClientProof
+{
+    BIGNUM *tau_c;
+    struct schnorr_Signature *signature;
+    BIGNUM *kappa;
 };
 
-// OTHERS
-struct ServerSign {
-    unsigned char tau_s[BUFFER];
-    unsigned char kappa[BIG_BUFFER];
+struct DeviceProof
+{
+    BIGNUM *s_i;
+    BIGNUM *kappa_i;
 };
 
-struct ClientProof {
-    unsigned char tau_c[BUFFER];
-    struct SchnorrSignature *signature;
-    unsigned char kappa[BUFFER];
+// AKA STRUCTS
+struct aka_Keychain
+{
+    struct schnorr_Keychain *keys;
+    unsigned int ID;
 };
 
-struct DeviceProof {
-    unsigned char s_i[BUFFER];
-    unsigned char kappa_i[BUFFER];
+// SSAKA STRUCTS
+struct ssaka_Keychain
+{
+    unsigned int ID;
+    struct schnorr_Keychain *keys;
+    BIGNUM *kappa;
 };
 
-/*  === GLOBALS ===
- *  ||---> params .............. Schnorr's Signature struct with p, q, g params
- *  ||---> g_idCounter ......... helping couter for CID generation
- */
-
-struct globals {
-    struct SchnorrParams *params;
-    unsigned int idCounter;
+// GLOBALS STRUCT
+struct globals
+{
+    struct schnorr_Params *params; // Schnorr's Signature struct with p, q, g params
+    unsigned int idCounter;        // helping couter for CID generation
 };
 
+// ======== EXTERNS =====================================================================
 extern struct globals g_globals;
-extern struct paillierKeychain p_keyring;
-extern DSA *dsa;
-extern pthread_t threads[];
 
-// AKA
-extern struct aka_Keychain g_aka_serverKeys;
-extern struct aka_Keychain g_aka_clientKeys;
-// SSAKA
-extern struct aka_Keychain g_ssaka_serverKeys;
+// Keychains
 extern struct ssaka_Keychain g_ssaka_devicesKeys[];
-extern struct paillierKeychain g_paiKeys;
-extern unsigned int currentNumberOfDevices;
-extern unsigned char pk_c[BUFFER];
+extern struct aka_Keychain g_serverKeys;
+extern struct aka_Keychain g_aka_clientKeys;
+extern struct paillier_Keychain g_paiKeys;
 
+// Support globals
+extern unsigned int currentNumberOfDevices;
+extern BIGNUM *pk_c;
+extern DSA *dsa;
+
+// Threding and pre-computation
+pthread_t threads[NUM_THREADS];
+extern BIGNUM *range;
+extern unsigned int pre_noise;
+extern unsigned int pre_message;
+extern const char *restrict file_precomputed_noise;
+extern const char *restrict file_precomputed_message;
+cJSON *json_noise;
+cJSON *json_message;
 
 #endif
