@@ -167,7 +167,7 @@ int main(void)
             goto end;
         }
 
-        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));/
+        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s)); /
 
 
         err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
