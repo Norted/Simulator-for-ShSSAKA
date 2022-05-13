@@ -80,7 +80,7 @@ unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *lambda, struct paillie
         printf(" * Computation of N^2 failed! (gen_pqg_params, support_functions)\n");
         goto end;
     }
-    err = l_or_a_computation(p, q, lambda);
+    err = lambda_computation(p, q, lambda);
     if (err != 1)
     {
         printf(" * Computation of LAMBDA failed! (gen_pqg_params, support_functions)\n");
@@ -261,7 +261,7 @@ end:
     return err;
 }
 
-unsigned int l_or_a_computation(BIGNUM *p, BIGNUM *q, BIGNUM *lambda)
+unsigned int lambda_computation(BIGNUM *p, BIGNUM *q, BIGNUM *lambda)
 {
     unsigned int err = 0;
     BIGNUM *p_sub = BN_new();
@@ -269,19 +269,19 @@ unsigned int l_or_a_computation(BIGNUM *p, BIGNUM *q, BIGNUM *lambda)
     err = BN_sub(p_sub, p, BN_value_one());
     if (err != 1)
     {
-        printf(" * Substraction failed! (l_or_a_computation, support_fuction)\n");
+        printf(" * Substraction failed! (lambda_computation, support_fuction)\n");
         goto end;
     }
     err = BN_sub(q_sub, q, BN_value_one());
     if (err != 1)
     {
-        printf(" * Substraction failed! (l_or_a_computation, support_fuction)\n");
+        printf(" * Substraction failed! (lambda_computation, support_fuction)\n");
         goto end;
     }
     err = lcm(p_sub, q_sub, lambda);
     if (err != 1)
     {
-        printf(" * Computation of LCM failed! (l_or_a_computation, support_fuction)\n");
+        printf(" * Computation of LCM failed! (lambda_computation, support_fuction)\n");
         goto end;
     }
 
@@ -342,39 +342,6 @@ end:
     return err;
 }
 
-unsigned int hash(BIGNUM *res, BIGNUM *Y, BIGNUM *t_s, BIGNUM *kappa)
-{
-    unsigned int err = 0;
-    unsigned char *inbuf = (unsigned char *)calloc(BUFFER * 2, sizeof(unsigned char));
-    inbuf[0] = '\0';
-    for (int i = 1; i < (BUFFER * 2); i++)
-        inbuf[i] = '0';
-    unsigned char *outbuf = (unsigned char *)calloc(SHA256_DIGEST_LENGTH, sizeof(unsigned char));
-    unsigned char *digest = (unsigned char *)calloc((SHA256_DIGEST_LENGTH * 2 + 1), sizeof(unsigned char));
-
-    strcat(inbuf, BN_bn2dec(Y));
-    strcat(inbuf, BN_bn2dec(t_s));
-
-    if (BN_is_zero(kappa) != 1)
-        strcat(inbuf, BN_bn2dec(kappa));
-
-    SHA256(inbuf, strlen(inbuf), outbuf);
-
-    digest[SHA256_DIGEST_LENGTH * 2] = '\0';
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-    {
-        snprintf(&(digest[i * 2]), SHA256_DIGEST_LENGTH, "%02x", (unsigned int)outbuf[i]);
-    }
-    BN_hex2bn(&res, digest);
-    err = 1;
-
-end:
-    free(outbuf);
-    free(inbuf);
-    free(digest);
-    return err;
-}
-
 unsigned int ec_hash(const EC_GROUP *group, BIGNUM *res, BIGNUM *Y, EC_POINT *t_s, EC_POINT *kappa)
 {
 
@@ -420,6 +387,8 @@ unsigned int rand_range(BIGNUM *rnd, const BIGNUM *bn_range)
 {
     unsigned int err = 0;
     BIGNUM *range_sub_one = BN_new();
+
+    BN_dec2bn(&rnd, "0");
 
     err = BN_sub(range_sub_one, bn_range, BN_value_one());
     if (err != 1)
@@ -482,11 +451,7 @@ unsigned int set_precomps(BIGNUM *message, BIGNUM *p_message, BIGNUM *p_noise)
     unsigned int err = 0;
     BIGNUM *tmp_r = BN_new();
 
-    if(pre_message == 0)
-    {
-        BN_dec2bn(&p_message, "0");
-    }
-    else
+    if(pre_message == 1 && BN_cmp(message, g_range) <= 0)
     {
         err = find_value(json_message, message, p_message);
         if(err != 0)
@@ -494,11 +459,18 @@ unsigned int set_precomps(BIGNUM *message, BIGNUM *p_message, BIGNUM *p_noise)
             printf(" * Find pre-computed value of KAPPA_I failed! (paiShamir_get_ci, paishamir)\n");
             goto end;
         }
+        err = 1;
+    }
+    else
+    {
+        BN_dec2bn(&p_message, "0");
+        err = 1;
     }
     
     if(pre_noise == 0)
     {
         BN_dec2bn(&p_noise, "0");
+        err = 1;
     }
     else
     {
@@ -514,6 +486,7 @@ unsigned int set_precomps(BIGNUM *message, BIGNUM *p_message, BIGNUM *p_noise)
             printf(" * Find pre-computed value of generated random failed! (paiShamir_get_ci, paiShamir)\n");
             goto end;
         }
+        err = 1;
     }
 
 end:

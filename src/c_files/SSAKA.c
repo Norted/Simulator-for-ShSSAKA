@@ -526,7 +526,12 @@ unsigned int _get_pk_c()
         return 0;
     }
 
-    EC_GROUP_get_order(g_globals.keychain->ec_group, order, ctx);
+    err = EC_GROUP_get_order(g_globals.keychain->ec_group, order, ctx);
+    if (err != 1)
+    {
+        printf(" * Get order failed! (SSAKA, _get_pk_c)\n");
+        goto end;
+    }
 
     for (int i = 0; i < currentNumberOfDevices; i++)
     {

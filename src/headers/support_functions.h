@@ -9,9 +9,8 @@ unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *lambda, struct paillie
 unsigned int lcm(BIGNUM *a, BIGNUM *b, BIGNUM *res);
 unsigned int count_mi(BIGNUM *mi, BIGNUM *g, BIGNUM *lambda, BIGNUM *n_sq, BIGNUM *n);
 unsigned int L(BIGNUM *u, BIGNUM *n, BIGNUM *res, BN_CTX *ctx);
-unsigned int l_or_a_computation(BIGNUM *p, BIGNUM *q, BIGNUM *lambda);
+unsigned int lambda_computation(BIGNUM *p, BIGNUM *q, BIGNUM *lambda);
 unsigned int generate_rnd_paillier(BIGNUM *bn_range, BIGNUM *gcd_chck, BIGNUM *random);
-unsigned int hash(BIGNUM *res, BIGNUM *Y, BIGNUM *t_s, BIGNUM *kappa);
 unsigned int ec_hash(const EC_GROUP *group, BIGNUM *res, BIGNUM *Y, EC_POINT *t_s, EC_POINT *kappa);
 unsigned int rand_range(BIGNUM * rnd, const BIGNUM * bn_range);
 unsigned int rand_point(const EC_GROUP *group, EC_POINT *point);

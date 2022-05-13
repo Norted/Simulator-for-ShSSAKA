@@ -6,20 +6,20 @@ unsigned int paillier_generate_keypair(struct paillier_Keychain *keychain)
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
     {
-        printf(" * Falied to generate CTX! (paillier_scheme, generate keypair)\n");
+        printf(" * Falied to generate CTX! (generate keypair, paillier_scheme)\n");
         return err;
     }
 
     err = gen_pqg_params(keychain->sk->p, keychain->sk->q, keychain->sk->lambda, keychain->pk);
     if(err != 1)
     {
-        printf(" * Generate P, Q, G, params failed! (paillier_scheme, generate keypair)\n");
+        printf(" * Generate P, Q, G, params failed! (generate keypair, paillier_scheme)\n");
         goto end;
     }
     err = count_mi(keychain->sk->mi, keychain->pk->g, keychain->sk->lambda, keychain->pk->n_sq, keychain->pk->n);
     if(err != 1)
     {
-        printf(" * Count MI failed! (paillier_scheme, generate keypair)\n");
+        printf(" * Count MI failed! (generate keypair, paillier_scheme)\n");
         goto end;
     }
 
@@ -34,7 +34,7 @@ unsigned int paillier_encrypt(struct paillier_PublicKey *pk, BIGNUM *plain, BIGN
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
     {
-        printf(" * Falied to generate CTX! (paillier_scheme, encrypt)\n");
+        printf(" * Falied to generate CTX! (encrypt, paillier_scheme)\n");
         return err;
     }
 
@@ -42,7 +42,7 @@ unsigned int paillier_encrypt(struct paillier_PublicKey *pk, BIGNUM *plain, BIGN
 
     if (BN_cmp(plain, pk->n) != -1)
     {
-        printf(" * Plaintext is bigger then the length of N! (paillier_scheme, encrypt)\n");
+        printf(" * Plaintext is bigger then the length of N! (encrypt, paillier_scheme)\n");
         goto end;
     }
 
@@ -51,7 +51,7 @@ unsigned int paillier_encrypt(struct paillier_PublicKey *pk, BIGNUM *plain, BIGN
         err = BN_mod_exp(precomp_message, pk->g, plain, pk->n_sq, ctx);
         if(err != 1)
         {
-            printf(" * Message mod_exp operation falied! (paillier_scheme, encrypt)\n");
+            printf(" * Message mod_exp operation falied! (encrypt, paillier_scheme)\n");
             goto end;
         }
     }
@@ -61,13 +61,13 @@ unsigned int paillier_encrypt(struct paillier_PublicKey *pk, BIGNUM *plain, BIGN
         err = generate_rnd_paillier(pk->n, pk->n, tmp_rnd);
         if(err != 1)
         {
-            printf(" * Generate random falied! (paillier_scheme, encrypt)\n");
+            printf(" * Generate random falied! (encrypt, paillier_scheme)\n");
             goto end;
         }
         err = BN_mod_exp(precomp_noise, tmp_rnd, pk->n, pk->n_sq, ctx);
         if(err != 1)
         {
-            printf(" * Noise mod_exp operation falied! (paillier_scheme, encrypt)\n");
+            printf(" * Noise mod_exp operation falied! (encrypt, paillier_scheme)\n");
             goto end;
         }
     }
@@ -75,7 +75,7 @@ unsigned int paillier_encrypt(struct paillier_PublicKey *pk, BIGNUM *plain, BIGN
     err = BN_mod_mul(cipher, precomp_message, precomp_noise, pk->n_sq, ctx);
     if(err != 1)
     {
-        printf(" * Multiplication of message and noise falied! (paillier_scheme, encrypt)\n");
+        printf(" * Multiplication of message and noise falied! (encrypt, paillier_scheme)\n");
         goto end;
     }
 
@@ -92,7 +92,7 @@ unsigned int paillier_decrypt(struct paillier_Keychain *keychain, BIGNUM *cipher
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
     {
-        printf(" * Falied to generate CTX! (paillier_scheme, decrypt)\n");
+        printf(" * Falied to generate CTX! (decrypt, paillier_scheme)\n");
         return err;
     }
 
@@ -101,19 +101,19 @@ unsigned int paillier_decrypt(struct paillier_Keychain *keychain, BIGNUM *cipher
     err = BN_mod_exp(u, cipher, keychain->sk->lambda, keychain->pk->n_sq, ctx);
     if(err != 1)
     {
-        printf(" * Cipher mod_exp operation failed! (paillier_scheme, decrypt)\n");
+        printf(" * Cipher mod_exp operation failed! (decrypt, paillier_scheme)\n");
         goto end;
     }
     err = L(u, keychain->pk->n, u, ctx);
     if(err != 1)
     {
-        printf(" * L function failed! (paillier_scheme, decrypt)\n");
+        printf(" * L function failed! (decrypt, paillier_scheme)\n");
         goto end;
     }
     err = BN_mod_mul(plain, u, keychain->sk->mi, keychain->pk->n, ctx);
     if(err != 1)
     {
-        printf(" * Cipher mod_mul operation failed! (paillier_scheme, decrypt)\n");
+        printf(" * Cipher mod_mul operation failed! (decrypt, paillier_scheme)\n");
         goto end;
     }
 
@@ -154,32 +154,32 @@ void free_paillier_keychain(struct paillier_Keychain *keychain)
     return;
 }
 
-////////////////////////////////////////////////////////
-// HOMOMORPHY FUNCTIONS ////////////////////////////////
-////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// HOMOMORPHY FUNCTIONS ////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-unsigned int homomorphy_add(struct paillier_PublicKey *pk, BIGNUM *a, BIGNUM *b, BIGNUM *res)
+unsigned int homomorphy_add(struct paillier_PublicKey *pk, BIGNUM *enc_1, BIGNUM *enc_2, BIGNUM *res)
 {
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
         return 0;
-    // Add one encrypted unsigned long longeger to another
-    unsigned int err = BN_mod_mul(res, a, b, pk->n_sq, ctx);
+    
+    unsigned int err = BN_mod_mul(res, enc_1, enc_2, pk->n_sq, ctx);
 
     BN_CTX_free(ctx);
     return err;
 }
 
-unsigned int homomorphy_add_const(struct paillier_PublicKey *pk, BIGNUM *a, BIGNUM *n, BIGNUM *res)
+unsigned int homomorphy_add_const(struct paillier_PublicKey *pk, BIGNUM *enc_value, BIGNUM *constant, BIGNUM *res)
 {
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
         return 0;
-    // Add constant n to an encrypted unsigned long longeger
+    
     unsigned int err = 0;
     BIGNUM *p_1 = BN_new();
-    err += BN_mod_exp(p_1, pk->g, n, pk->n_sq, ctx);
-    err += BN_mod_mul(res, a, p_1, pk->n_sq, ctx);
+    err += BN_mod_exp(p_1, pk->g, constant, pk->n_sq, ctx);
+    err += BN_mod_mul(res, enc_value, p_1, pk->n_sq, ctx);
 
     BN_free(p_1);
     BN_CTX_free(ctx);
@@ -188,13 +188,13 @@ unsigned int homomorphy_add_const(struct paillier_PublicKey *pk, BIGNUM *a, BIGN
     return 1;
 }
 
-unsigned int homomorphy_mul_const(struct paillier_PublicKey *pk, BIGNUM *a, BIGNUM *n, BIGNUM *res)
+unsigned int homomorphy_mul_const(struct paillier_PublicKey *pk, BIGNUM *enc_value, BIGNUM *constant, BIGNUM *res)
 {
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
         return 0;
-    // Multiplies an encrypted unsigned long longeger by a constant
-    unsigned int err = BN_mod_exp(res, a, n, pk->n_sq, ctx);
+    
+    unsigned int err = BN_mod_exp(res, enc_value, constant, pk->n_sq, ctx);
 
     BN_CTX_free(ctx);
     return err;

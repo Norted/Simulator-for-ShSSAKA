@@ -127,9 +127,9 @@ int main(void)
     struct ServerSign server;
     init_serversign(g_globals.keychain->ec_group, &server);
 
-    pre_message = 1;
-    pre_noise = 1;
-    
+    // pre_message = 1;
+    // pre_noise = 1; 
+
     err = ssaka_setup();
     if (err != 1)
     {
@@ -167,7 +167,7 @@ int main(void)
         ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
     }
 
-    /* err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
+    err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
     if(err != 1)
     {
         printf(" * SSAKA Server Sign Verify failed!\n");
@@ -175,7 +175,7 @@ int main(void)
         goto end;
     }
 
-    printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s)); */
+    printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
 
     err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
     if (err != 1)
@@ -197,16 +197,15 @@ end:
 
     //*/
 
-    /*  PAILLIER-SHAMIR test    
+    /*  PAILLIER-SHAMIR test   
     printf("\n\n---PAILLIER-SHAMIR test---\n");
 
-    BIGNUM *sk_sum = BN_new();
-    BIGNUM *sk_chck = BN_new();
+    BIGNUM *sk_chck_1 = BN_new();
+    BIGNUM *sk_chck_2 = BN_new();
     BIGNUM *order = BN_new();
-    EC_POINT *pk_chck = EC_POINT_new(g_globals.keychain->ec_group);
     
 
-    unsigned int list_of_used_devs[] = {2, 3, 1};
+    unsigned int list_of_used_devs[] = {0, 2, 1};
     unsigned int size_used = sizeof(list_of_used_devs) / sizeof(unsigned int);
 
     unsigned int list_of_all_devs[currentNumberOfDevices];
@@ -253,7 +252,7 @@ end:
         g_ssaka_devicesKeys[i].sk = BN_new();
         g_ssaka_devicesKeys[i].kappa = BN_new();
 
-        err = rand_range(g_ssaka_devicesKeys[i].pk, EC_GROUP_get0_order(g_globals.keychain->ec_group));
+        err = rand_range(g_ssaka_devicesKeys[i].pk, order);
         if (err != 1)
         {
             printf(" * Generation of a random public key failed!\n");
@@ -270,31 +269,18 @@ end:
         goto end;
     }
 
-    /* printf("\n---DEVICES---\n");
-    for (int i = 0; i < currentNumberOfDevices; i++)
-    {
-        printf("\n- DEVICE %d -\n", i);
-        ssaka_keyPrinter(&g_ssaka_devicesKeys[i]);
-    }
-    printf("\n"); /
+    err = paiShamir_interpolation(list_of_all_devs, currentNumberOfDevices, order, sk_chck_1);
+    err = paiShamir_interpolation(list_of_used_devs, size_used, order, sk_chck_2);
 
-    err = paiShamir_interpolation(list_of_all_devs, currentNumberOfDevices, p_keychain.sk->q, sk_chck); //order
-    err = EC_POINT_mul(g_globals.keychain->ec_group, pk_chck, sk_chck, NULL, NULL, ctx);
-    printf("\nRESULTS (ALL):\n|---> SK: %s\n|---> PK: %s\n",
-        BN_bn2dec(sk_chck), EC_POINT_point2hex(g_globals.keychain->ec_group, pk_chck, POINT_CONVERSION_COMPRESSED, ctx));
+    printf("\nSAME?\t%s\n\n(ALL)\t%s\n(PART)\t%s\n", (BN_cmp(sk_chck_1, sk_chck_2) == 0)? "YES" : "NO", BN_bn2hex(sk_chck_1), BN_bn2hex(sk_chck_2));
 
-    err = paiShamir_interpolation(list_of_used_devs, size_used, p_keychain.sk->q, sk_chck); //order
-    err = EC_POINT_mul(g_globals.keychain->ec_group, pk_chck, sk_chck, NULL, NULL, ctx);
-    printf("\nRESULTS (PART):\n|---> SK: %s\n|---> PK: %s\n",
-        BN_bn2dec(sk_chck), EC_POINT_point2hex(g_globals.keychain->ec_group, pk_chck, POINT_CONVERSION_COMPRESSED, ctx));
 
 end:
     printf("\nRETURN CODE: %u\n", return_code);
 
-    BN_free(sk_chck);
-    BN_free(sk_sum);
     BN_free(order);
-    EC_POINT_free(pk_chck);
+    BN_free(sk_chck_1);
+    BN_free(sk_chck_2);
     free_schnorr_keychain(g_globals.keychain);
     free(g_globals.keychain);
     free_paillier_keychain(&p_keychain);
