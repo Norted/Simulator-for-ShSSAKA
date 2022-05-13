@@ -1,6 +1,5 @@
 # libraries folder
 openssl/
-EC/
 
 # binary files
 GUI
@@ -17,6 +16,9 @@ paramgen
 openssl_bn
 schnorrs_signature
 database_cjson
+
+# LOG files
+*.log
 
 # Prerequisites
 *.d

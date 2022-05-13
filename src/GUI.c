@@ -2,7 +2,6 @@
 #include <SSAKA.h>
 #include <support_functions.h>
 #include <gtk/gtk.h>
-#include <glib/gprintf.h>
 #include <globals.h>
 
 struct Buttons
@@ -42,13 +41,13 @@ struct aka_Keychain g_aka_clientKeys;
 struct ssaka_Keychain g_ssaka_devicesKeys[G_NUMOFDEVICES];
 
 struct paillier_Keychain g_paiKeys;
-BIGNUM *pk_c;
+EC_POINT *pk_c;
 
 // Other globals
 struct globals g_globals;
 unsigned int currentNumberOfDevices = 4;
-DSA *dsa;
-BIGNUM *range;
+BIGNUM *g_range;
+unsigned int paillier_inited = 0;
 unsigned int pre_noise = 0;
 unsigned int pre_message = 0;
 
@@ -77,52 +76,21 @@ int main(int argc, char **argv)
 {
   GtkApplication *app;
   int status;
-  dsa = DSA_new();
-  g_globals.params = (struct schnorr_Params *)malloc(sizeof(struct schnorr_Params));
-  init_schnorr_params(g_globals.params);
-  gen_schnorr_params(dsa, g_globals.params);
+  
+  g_globals.keychain = (struct schnorr_Keychain *)malloc(sizeof(struct schnorr_Keychain));
+  gen_schnorr_keychain(EC_GROUP_new_by_curve_name(NID_secp256k1), g_globals.keychain);
   g_globals.idCounter = 1;
 
   Y = BN_new();
   BN_dec2bn(&Y, "100");
 
-  range = BN_new();
+  g_range = BN_new();
   json_noise = cJSON_CreateObject();
   json_message = cJSON_CreateObject();
   unsigned char *tmp_string = (char *)malloc(sizeof(char) * BUFFER / 2);
 
   sprintf(tmp_string, "%d", RANGE);
-  BN_dec2bn(&range, tmp_string);
-
-  init_paillier_keychain(&g_paiKeys);
-
-  if (access(file_precomputed_noise, F_OK) || access(file_precomputed_message, F_OK))
-  {
-    if (!paillier_generate_keypair(&g_paiKeys))
-    {
-      printf(" * Keychain generation failed!\n");
-      return 0;
-    }
-    threaded_precomputation();
-    for (int i = 0; i < NUM_THREADS; i++)
-    {
-      pthread_join(threads[i], NULL);
-    }
-  }
-  else
-  {
-    if (noise_precomp && access(file_precomputed_noise, F_OK))
-    {
-      read_keys(file_precomputed_noise, &g_paiKeys);
-    }
-    else if (message_precomp && access(file_precomputed_message, F_OK))
-    {
-      read_keys(file_precomputed_message, &g_paiKeys);
-    }
-  }
-
-  json_noise = parse_JSON(file_precomputed_noise);
-  json_message = parse_JSON(file_precomputed_message);
+  BN_dec2bn(&g_range, tmp_string);
 
   gtk_init(&argc, &argv);
   setCSS();
@@ -132,8 +100,7 @@ int main(int argc, char **argv)
   g_object_unref(app);
 
   BN_free(Y);
-  DSA_free(dsa);
-  free_schnorr_params(g_globals.params);
+  free_schnorr_keychain(g_globals.keychain);
   if (setup_toggled == 1)
     free_ssaka_mem();
 
@@ -306,19 +273,19 @@ static void akaSetup(GtkWidget *button, GtkWidget *label)
 
   setup_toggled = 1;
 
-  gchar *dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20Parameters initialized!\n"));
+  gchar *dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 Parameters initialized!\n"));
   updateLabel(GTK_LABEL(label), dmp);
 }
 
 static void akaServerSignVerify(GtkWidget *button, GtkWidget *label)
 {
   struct ServerSign server = *(struct ServerSign *)malloc(sizeof(struct ServerSign));
-  init_serversign(&server);
+  init_serversign(g_globals.keychain->ec_group, &server);
   gchar *dmp;
 
   if (size_used == 0)
   {
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20Define used devices first!", BN_bn2dec(server.tau_s)));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 Define used devices first!\n"));
     updateLabel(GTK_LABEL(label), dmp);
     return;
   }
@@ -328,11 +295,11 @@ static void akaServerSignVerify(GtkWidget *button, GtkWidget *label)
   if (err != 1 || BN_is_zero(server.tau_s) == 1)
   {
     // g_strconcat (gtk_label_get_text (console), g_strdup_printf (str));
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20TAU_S = %s\n\tVerification failed! :(\n", BN_bn2dec(server.tau_s)));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 TAU_S = %s\n\tVerification failed! :(\n", BN_bn2dec(server.tau_s)));
   }
   else
   {
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20TAU_S = %s\n\tVerification proceeded! :)\n", BN_bn2dec(server.tau_s)));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 TAU_S = %s\n\tVerification proceeded! :)\n", BN_bn2dec(server.tau_s)));
   }
   updateLabel(GTK_LABEL(label), dmp);
 }
@@ -343,15 +310,15 @@ static void ssakaAddShare(GtkWidget *button, GtkWidget *label)
   gchar *dmp;
   if (err == 1)
   {
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20%lu devices added!", add_number));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 %lu devices added!\n", add_number));
   }
   else if (err == 2)
   {
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20Only %d places left!", G_NUMOFDEVICES - currentNumberOfDevices));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 Only %d places left!\n", G_NUMOFDEVICES - currentNumberOfDevices));
   }
   else
   {
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20ERROR! No devices added!"));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 ERROR! No devices added!\n"));
   }
   updateLabel(GTK_LABEL(label), dmp);
 }
@@ -362,22 +329,22 @@ static void ssakaRevShare(GtkWidget *button, GtkWidget *label)
   gchar *dmp;
   if (err == 1)
   {
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20%d devices removed!", size_revoke));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 %d devices removed!\n", size_revoke));
     updateLabel(GTK_LABEL(label), dmp);
   }
   else if (err == 2)
   {
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20Must remain at least %d devices!", G_POLYDEGREE + 1));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 Must remain at least %d devices!\n", G_POLYDEGREE + 1));
     updateLabel(GTK_LABEL(label), dmp);
   }
   else if (err == 3)
   {
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20Cannot remove client (0 index)!"));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 Cannot remove client (0 index)!\n"));
     updateLabel(GTK_LABEL(label), dmp);
   }
   else
   {
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20ERROR! No devices removed!"));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 ERROR! No devices removed!\n"));
     updateLabel(GTK_LABEL(label), dmp);
   }
 }
@@ -385,19 +352,26 @@ static void ssakaRevShare(GtkWidget *button, GtkWidget *label)
 static void openKeysDialogue(GtkWidget *button, gpointer *user_data)
 {
   GtkWidget *dialog = gtk_dialog_new();
+  BN_CTX *ctx = BN_CTX_secure_new();
+  if(!ctx)
+  {
+    printf(" * Failed to generate CTX!\n");
+    return;
+  }
 
   gtk_window_set_title(GTK_WINDOW(dialog), "Generated keys");
   gtk_container_set_border_width(GTK_CONTAINER(dialog), 10);
   gtk_window_set_default_size(GTK_WINDOW(dialog), 500, 500);
 
   gchar *message = g_strdup_printf(" --- Server --- \nID:\t%u\nPK:\t%s\nSK:\t%s\n\n --- Client --- \nID:\t%u\nPK:\t%s\nSK:\t%s\n\n==================\n\n",
-                                   g_serverKeys.ID, BN_bn2dec(g_serverKeys.keys->pk), BN_bn2dec(g_serverKeys.keys->sk), g_ssaka_devicesKeys[0].ID,
-                                   BN_bn2dec(g_ssaka_devicesKeys[0].keys->pk), BN_bn2dec(g_ssaka_devicesKeys[0].keys->sk));
+                                   g_serverKeys.ID, EC_POINT_point2hex(g_globals.keychain->ec_group, EC_KEY_get0_public_key(g_serverKeys.keys->keys), POINT_CONVERSION_COMPRESSED, ctx),
+                                   BN_bn2hex(EC_KEY_get0_private_key(g_serverKeys.keys->keys)), g_ssaka_devicesKeys[0].ID, BN_bn2hex(g_ssaka_devicesKeys[0].pk),
+                                   BN_bn2hex(g_ssaka_devicesKeys[0].sk));
   for (int i = 1; i < currentNumberOfDevices; i++)
   {
     message = g_strconcat(message, g_strdup_printf("--- Device %d ---\nID:\t%u\nPK:\t%s\nSK:\t%s\n\n",
-                                                   i, g_ssaka_devicesKeys[i].ID, BN_bn2dec(g_ssaka_devicesKeys[i].keys->pk),
-                                                   BN_bn2dec(g_ssaka_devicesKeys[i].keys->sk)));
+                                                   i, g_ssaka_devicesKeys[i].ID, BN_bn2hex(g_ssaka_devicesKeys[i].pk),
+                                                   BN_bn2hex(g_ssaka_devicesKeys[i].sk)));
   }
   message = g_strconcat(message, g_strdup_printf("\nEscape by pressing ESC ..."));
 
@@ -416,18 +390,26 @@ static void openKeysDialogue(GtkWidget *button, gpointer *user_data)
 
   gtk_widget_destroy(dialog);
   g_free(message);
+  BN_CTX_free(ctx);
 }
 
 static void openParamDialogue(GtkWidget *button, gpointer *user_data)
 {
   GtkWidget *dialog = gtk_dialog_new();
+  BN_CTX *ctx = BN_CTX_secure_new();
+  if(!ctx)
+  {
+    printf(" * Failed to generate CTX!\n");
+    return;
+  }
 
   gtk_window_set_title(GTK_WINDOW(dialog), "Parameters");
   gtk_container_set_border_width(GTK_CONTAINER(dialog), 10);
   gtk_window_set_default_size(GTK_WINDOW(dialog), 200, 200);
 
-  gchar *message = g_strdup_printf("\nY:\t%s\n\nQ:\t%s\n\nG:\t%s\n\n\nEscape by pressing ESC ...", BN_bn2dec(Y),
-                                   BN_bn2dec(g_globals.params->q), BN_bn2dec(g_globals.params->g));
+  gchar *message = g_strdup_printf("\nY:\t%s\n\nQ:\t%s\n\nPK_C:\t%s\n\n\nEscape by pressing ESC ...", BN_bn2dec(Y),
+                                   BN_bn2hex(EC_GROUP_get0_order(g_globals.keychain->ec_group)),
+                                   EC_POINT_point2hex(g_globals.keychain->ec_group, pk_c, POINT_CONVERSION_COMPRESSED, ctx));
 
   GtkWidget *label = gtk_label_new(message);
   gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
@@ -444,6 +426,7 @@ static void openParamDialogue(GtkWidget *button, gpointer *user_data)
 
   gtk_widget_destroy(dialog);
   g_free(message);
+  BN_CTX_free(ctx);
 }
 
 /*  OTHER FUNCTIONS */
@@ -453,7 +436,7 @@ static void updateSpinButton_message(GtkWidget *spinButton, GtkWidget *label)
   gchar *str_Y = (gchar *)malloc(sizeof(gchar) * BUFFER / 2);
   sprintf(str_Y, "%lu", int_Y);
   BN_dec2bn(&Y, str_Y);
-  gchar *dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20Message value changed to %lu!\n", int_Y));
+  gchar *dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 Message value changed to %lu!\n", int_Y));
   updateLabel(GTK_LABEL(label), dmp);
   free(str_Y);
 }
@@ -461,7 +444,7 @@ static void updateSpinButton_message(GtkWidget *spinButton, GtkWidget *label)
 static void updateSpinButton_add(GtkWidget *spinButton, GtkWidget *label)
 {
   add_number = (guint64)gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spinButton));
-  gchar *dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20Add value changed to %lu!\n", add_number));
+  gchar *dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 Add value changed to %lu!\n", add_number));
   updateLabel(GTK_LABEL(label), dmp);
 }
 
@@ -485,13 +468,13 @@ void updateEntry_add(GtkWidget *entry, GtkWidget *label)
   }
   if (counter >= currentNumberOfDevices)
   {
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20Can be used only %d devices!\n", currentNumberOfDevices - 1));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 Can be used only %d devices!\n", currentNumberOfDevices - 1));
     updateLabel(GTK_LABEL(label), dmp);
   }
   else
   {
     size_used = counter;
-    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20Number of used devices is %d!\n", counter));
+    dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 Number of used devices is %d!\n", counter));
     updateLabel(GTK_LABEL(label), dmp);
 
     printf("ADD: [");
@@ -515,7 +498,7 @@ void updateEntry_revoke(GtkWidget *entry, GtkWidget *label)
     }
   }
   size_revoke = counter;
-  gchar *dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20Number of revoked devices is %d!\n", counter));
+  gchar *dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 Number of revoked devices is %d!\n", counter));
   updateLabel(GTK_LABEL(label), dmp);
 
   printf("REVOKE: [");
@@ -533,7 +516,8 @@ void checkNoise(GtkWidget *entry, GtkWidget *label)
   else
     pre_message = 1;
 
-  gchar *dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20> Message toggled! (%d)\n", pre_message));
+  printf("Message pre-computation %s!\n", (pre_message)? "On":"Off");
+  gchar *dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 Message pre-computation %s!\n", (pre_message)? "On":"Off"));
   updateLabel(GTK_LABEL(label), dmp);
 }
 
@@ -544,7 +528,8 @@ void checkMessage(GtkWidget *entry, GtkWidget *label)
   else
     pre_noise = 1;
 
-  gchar *dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20> Noise toggled! (%d)\n", pre_noise));
+  printf("Noise pre-computation %s!\n", (pre_noise)? "On":"Off");
+  gchar *dmp = g_strconcat(lg_consoleName, g_strdup_printf("\n\x20>\x20 Noise pre-computation %s!\n", (pre_noise)? "On":"Off"));
   updateLabel(GTK_LABEL(label), dmp);
 }
 

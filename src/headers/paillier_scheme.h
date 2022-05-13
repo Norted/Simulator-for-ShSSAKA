@@ -11,8 +11,8 @@ unsigned int paillier_decrypt(struct paillier_Keychain *keychain, BIGNUM *cipher
 void init_paillier_keychain(struct paillier_Keychain *keychain);
 void free_paillier_keychain(struct paillier_Keychain *keychain);
 
-unsigned int homomorphy_add(struct paillier_PublicKey *pk, BIGNUM *a, BIGNUM *b, BIGNUM *res);
-unsigned int homomorphy_add_const(struct paillier_PublicKey *pk, BIGNUM *a, BIGNUM *n, BIGNUM *res);
-unsigned int homomorphy_mul_const(struct paillier_PublicKey *pk, BIGNUM *a, BIGNUM *n, BIGNUM *res);
+unsigned int homomorphy_add(struct paillier_PublicKey *pk, BIGNUM *enc_1, BIGNUM *enc_2, BIGNUM *res);
+unsigned int homomorphy_add_const(struct paillier_PublicKey *pk, BIGNUM *enc_value, BIGNUM *constant, BIGNUM *res);
+unsigned int homomorphy_mul_const(struct paillier_PublicKey *pk, BIGNUM *enc_value, BIGNUM *constant, BIGNUM *res);
 
 #endif

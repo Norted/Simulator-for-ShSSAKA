@@ -18,21 +18,22 @@ struct aka_Keychain g_aka_clientKeys;
 extern struct ssaka_Keychain g_ssaka_devicesKeys[G_NUMOFDEVICES];
 
 struct paillier_Keychain g_paiKeys;
-BIGNUM *pk_c;
+EC_POINT *pk_c;
 
 // Globals
+BIGNUM *g_range;
 struct globals g_globals;
 unsigned int currentNumberOfDevices = 4;
-DSA *dsa;
 
 // Threding and pre-computation globals
-BIGNUM *range;
+unsigned int paillier_inited = 0;
 unsigned int pre_noise = 0;
 unsigned int pre_message = 0;
 
 // File names
-const char *restrict file_precomputed_noise = "../precomputed_values/precomputation_noise.json";
-const char *restrict file_precomputed_message = "../precomputed_values/precomputation_message.json";
+const char *restrict file_keychain = "keychain.json";
+const char *restrict file_precomputed_noise = "precomputed_values/precomputation_noise.json";
+const char *restrict file_precomputed_message = "precomputed_values/precomputation_message.json";
 
 unsigned int test_homomorphy();
 unsigned int test_paiShamir();
@@ -42,44 +43,47 @@ int main(void)
     unsigned int return_code = 1;
     unsigned int err = 0;
 
-    dsa = DSA_new();
-    if(!dsa)
-    {
-        printf(" * DSA initialization failed!\n");
-        return 0;
-    }
+    BIGNUM *message = BN_new();
+    BN_dec2bn(&message, "123");
 
     g_globals.idCounter = 1;
-    g_globals.params = (struct schnorr_Params *)malloc(sizeof(struct schnorr_Params));
-    if (g_globals.params == NULL)
+    g_globals.keychain = (struct schnorr_Keychain *)malloc(sizeof(struct schnorr_Keychain));
+
+    unsigned char *tmp_str = (char *)malloc(sizeof(char) * BUFFER);
+    g_range = BN_new();
+    sprintf(tmp_str, "%d", RANGE);
+    BN_dec2bn(&g_range, tmp_str);
+
+    EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
+    if (group == NULL)
     {
-        printf(" * PARAMS ALOCATION FAILED!\n");
+        printf(" * Failed to generate EC group!\n");
         return_code = 0;
-        return 0;
+        // goto final;
     }
-    init_schnorr_params(g_globals.params);
-    err = gen_schnorr_params(dsa, g_globals.params);
+    if (g_globals.keychain == NULL)
+    {
+        printf(" * KEYCHAIN ALOCATION FAILED!\n");
+        return_code = 0;
+        // goto final;
+    }
+    err = gen_schnorr_keychain(group, g_globals.keychain);
     if (err != 1)
     {
         printf(" * Failed to generate Schnorr params!\n");
         return_code = 0;
-        return 0;
+        // goto final;
     }
-
-    BIGNUM *pk_c = BN_new();
-    BIGNUM * message = BN_new();
-    BN_dec2bn(&message, "123");
-    
 
     /*  AKA-SETUP and AKA-CLIENT-REGISTER
      *      1) randomly initialize generator from GENERATORS
      *      2) generate keys for devices, client and server side
      */
 
-    /*  AKA test    
-
+    /*  AKA test
+        printf("\n\n---AKA test---\n");
         struct ServerSign server;
-        init_serversign(&server);
+        init_serversign(g_globals.keychain->ec_group, &server);
 
         err = aka_setup();
         if (err != 1)
@@ -102,111 +106,126 @@ int main(void)
 
         free_aka_mem(&g_aka_clientKeys);
         free_aka_mem(&g_serverKeys);
-        free_schnorr_params(g_globals.params);
-        free(g_globals.params);
+        free_schnorr_keychain(g_globals.keychain);
+        free(g_globals.keychain);
         free_serversign(&server);
     //*/
 
-    /*  SSAKA test  
-        printf("\n\n---SSAKA test---\n");
+    /*  SSAKA test  */
+    printf("\n\n---SSAKA test---\n");
 
-        unsigned int list_of_all_devs[currentNumberOfDevices-1];
-        for (int i = 1; i < currentNumberOfDevices; i++) {
-            list_of_all_devs[i-1] = i;
-        }
-        unsigned int size_all = sizeof(list_of_all_devs)/sizeof(unsigned int);
+    unsigned int list_of_all_devs[currentNumberOfDevices - 1];
+    for (int i = 1; i < currentNumberOfDevices; i++)
+    {
+        list_of_all_devs[i - 1] = i;
+    }
+    unsigned int size_all = sizeof(list_of_all_devs) / sizeof(unsigned int);
 
-        unsigned int list_of_used_devs[] = {1, 2};
-        unsigned int size_used = sizeof(list_of_used_devs)/sizeof(unsigned int);
+    unsigned int list_of_used_devs[] = {1, 2};
+    unsigned int size_used = sizeof(list_of_used_devs) / sizeof(unsigned int);
 
-        struct ServerSign server;
-        init_serversign(&server);
+    struct ServerSign server;
+    init_serversign(g_globals.keychain->ec_group, &server);
 
-        err = ssaka_setup();
-        if(err != 1)
-        {
-            printf(" * SSAKA setup failed!\n");
-            return_code = 0;
-            goto end;
-        }
+    // pre_message = 1;
+    // pre_noise = 1; 
 
-        err = ssaka_ClientAddShare(3);
-        if(err != 1)
-        {
-            printf(" * AddShare failed!\n");
-            return_code = 0;
-            goto end;
-        }
-        printf("\n+++ ADDED! +++\n");
-        for (int j = 1; j < currentNumberOfDevices; j++) {
-            printf("--- DEVICE %d ---\n", j);
-            ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
-        }
+    err = ssaka_setup();
+    if (err != 1)
+    {
+        printf(" * SSAKA setup failed!\n");
+        return_code = 0;
+        goto end;
+    }
 
-        unsigned int remove[] = {1, 3};
-        unsigned int size_remove = sizeof(remove)/sizeof(unsigned int);
-        err = ssaka_ClientRevShare(remove, size_remove);
-        if(err != 1)
-        {
-            printf(" * RevShare failed!\n");
-            return_code = 0;
-            goto end;
-        }
+    err = ssaka_ClientAddShare(3);
+    if(err != 1)
+    {
+        printf(" * AddShare failed!\n");
+        return_code = 0;
+        goto end;
+    }
+    printf("\n+++ ADDED! +++\n");
+    for (int j = 1; j < currentNumberOfDevices; j++) {
+        printf("--- DEVICE %d ---\n", j);
+        ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
+    }
 
-        printf("\n--- REMOVED ---\n");
-        for (int j = 1; j < currentNumberOfDevices; j++) {
-            printf("--- DEVICE %d ---\n", j);
-            ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
-        }
+    unsigned int remove[] = {1, 3};
+    unsigned int size_remove = sizeof(remove)/sizeof(unsigned int);
+    err = ssaka_ClientRevShare(remove, size_remove);
+    if(err != 1)
+    {
+        printf(" * RevShare failed!\n");
+        return_code = 0;
+        goto end;
+    }
 
-        /*err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
-        if(err != 1)
-        {
-            printf(" * SSAKA Server Sign Verify failed!\n");
-            return_code = 0;
-            goto end;
-        }
+    printf("\n--- REMOVED ---\n");
+    for (int j = 1; j < currentNumberOfDevices; j++) {
+        printf("--- DEVICE %d ---\n", j);
+        ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
+    }
 
-        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s)); /
+    err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
+    if(err != 1)
+    {
+        printf(" * SSAKA Server Sign Verify failed!\n");
+        return_code = 0;
+        goto end;
+    }
 
+    printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
 
-        err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
-        if(err != 1)
-        {
-            printf(" * SSAKA Server Sign Verify failed!\n");
-            return_code = 0;
-            goto end;
-        } 
-        
-        printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
-       
-    
-    end:
-        printf("\n\nRETURN_CODE: %u\n", return_code);
+    err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
+    if (err != 1)
+    {
+        printf(" * SSAKA Server Sign Verify failed!\n");
+        return_code = 0;
+        goto end;
+    }
 
-        free_ssaka_mem();
-        free_schnorr_params(g_globals.params);
-        free(g_globals.params);
-        free_serversign(&server);
+    printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
+
+end:
+    printf("\n\nRETURN_CODE: %u\n", return_code);
+
+    free_ssaka_mem();
+    free_schnorr_keychain(g_globals.keychain);
+    free(g_globals.keychain);
+    free_serversign(&server);
 
     //*/
 
     /*  PAILLIER-SHAMIR test   
     printf("\n\n---PAILLIER-SHAMIR test---\n");
 
-    BIGNUM *sk_sum = BN_new();
-    BIGNUM *sk_chck = BN_new();
-    BIGNUM *pk_chck = BN_new();
-    BN_CTX *ctx = BN_CTX_secure_new();
+    BIGNUM *sk_chck_1 = BN_new();
+    BIGNUM *sk_chck_2 = BN_new();
+    BIGNUM *order = BN_new();
     
 
-    unsigned int list_of_used_devs[] = {2, 3, 1};
+    unsigned int list_of_used_devs[] = {0, 2, 1};
     unsigned int size_used = sizeof(list_of_used_devs) / sizeof(unsigned int);
 
     unsigned int list_of_all_devs[currentNumberOfDevices];
     for (unsigned int i = 0; i < currentNumberOfDevices; i++)
     {
         list_of_all_devs[i] = i;
+    }
+
+    BN_CTX *ctx = BN_CTX_secure_new();
+    if(!ctx)
+    {
+        printf(" * Failed to generate CTX!\n");
+        goto end;
+    }
+
+    err = EC_GROUP_get_order(g_globals.keychain->ec_group, order, ctx);
+    if(err != 1)
+    {
+        printf(" * Failed to get the EC order!\n");
+        goto end;
     }
 
     struct paillier_Keychain p_keychain;
@@ -229,12 +248,11 @@ int main(void)
     for (int i = 0; i < currentNumberOfDevices; i++)
     {
         g_ssaka_devicesKeys[i].ID = g_globals.idCounter++;
-        g_ssaka_devicesKeys[i].keys = (struct schnorr_Keychain *)malloc(sizeof(struct schnorr_Keychain));
-        init_schnorr_keychain(g_ssaka_devicesKeys[i].keys);
+        g_ssaka_devicesKeys[i].pk = BN_new();
+        g_ssaka_devicesKeys[i].sk = BN_new();
         g_ssaka_devicesKeys[i].kappa = BN_new();
 
-        err = rand_range(g_ssaka_devicesKeys[i].keys->pk, g_globals.params->q);
-        //err = ssaka_KeyGeneration(&g_ssaka_devicesKeys[i]);
+        err = rand_range(g_ssaka_devicesKeys[i].pk, order);
         if (err != 1)
         {
             printf(" * Generation of a random public key failed!\n");
@@ -243,7 +261,6 @@ int main(void)
         }
     }
 
-    // err = _shamir_distribution(message);
     err = paiShamir_distribution(&p_keychain);
     if (err != 1)
     {
@@ -252,38 +269,27 @@ int main(void)
         goto end;
     }
 
-    /* printf("\n---DEVICES---\n");
-    for (int i = 0; i < currentNumberOfDevices; i++)
-    {
-        printf("\n- DEVICE %d -\n", i);
-        ssaka_keyPrinter(&g_ssaka_devicesKeys[i]);
-    }
-    printf("\n"); /
+    err = paiShamir_interpolation(list_of_all_devs, currentNumberOfDevices, order, sk_chck_1);
+    err = paiShamir_interpolation(list_of_used_devs, size_used, order, sk_chck_2);
 
-    err = paiShamir_interpolation(list_of_all_devs, currentNumberOfDevices, sk_chck);
-    err = BN_mod_exp(pk_chck, g_globals.params->g, sk_chck, g_globals.params->q, ctx);
-    printf("\nRESULTS (ALL):\n|---> SK: %s\n|---> PK: %s\n",
-    BN_bn2dec(sk_chck), BN_bn2dec(pk_chck));
+    printf("\nSAME?\t%s\n\n(ALL)\t%s\n(PART)\t%s\n", (BN_cmp(sk_chck_1, sk_chck_2) == 0)? "YES" : "NO", BN_bn2hex(sk_chck_1), BN_bn2hex(sk_chck_2));
 
-    err = paiShamir_interpolation(list_of_used_devs, size_used, sk_chck);
-    err = BN_mod_exp(pk_chck, g_globals.params->g, sk_chck, g_globals.params->q, ctx);
-    printf("\nRESULTS (PART):\n|---> SK: %s\n|---> PK: %s\n",
-    BN_bn2dec(sk_chck), BN_bn2dec(pk_chck));
 
 end:
     printf("\nRETURN CODE: %u\n", return_code);
 
-    BN_free(sk_chck);
-    BN_free(sk_sum);
-    BN_free(pk_chck);
-    free_schnorr_params(g_globals.params);
-    free(g_globals.params);
+    BN_free(order);
+    BN_free(sk_chck_1);
+    BN_free(sk_chck_2);
+    free_schnorr_keychain(g_globals.keychain);
+    free(g_globals.keychain);
     free_paillier_keychain(&p_keychain);
 
     for (int i = 0; i < currentNumberOfDevices; i++)
     {
-        free_schnorr_keychain(g_ssaka_devicesKeys[i].keys);
-        free(g_ssaka_devicesKeys[i].keys);
+        BN_free(g_ssaka_devicesKeys[i].pk);
+        BN_free(g_ssaka_devicesKeys[i].sk);
+        BN_free(g_ssaka_devicesKeys[i].kappa);
     }
 
     BN_CTX_free(ctx);
@@ -293,100 +299,101 @@ end:
         printf("\n\n---SCHNORR test---\n");
         int stop = 0;
 
-        // struct schnorr_Params params;
-        // init_schnorr_params(&params);
-        struct schnorr_Keychain keys_s;
-        init_schnorr_keychain(&keys_s);
-        struct schnorr_Signature sign_s;
-        init_schnorr_signature(&sign_s);
-        struct schnorr_Keychain keys_c;
-        init_schnorr_keychain(&keys_c);
-        struct schnorr_Signature sign_c;
-        init_schnorr_signature(&sign_c);
+        struct schnorr_Keychain s_keychain;
+        struct schnorr_Signature s_signature;
+        struct schnorr_Keychain c_keychain;
+        struct schnorr_Signature c_signature;
 
-        BIGNUM *kappa_s = BN_new();
-        BN_dec2bn(&kappa_s, "1");
-        BIGNUM *kappa_c = BN_new();
-        BN_dec2bn(&kappa_c, "1");
+        EC_POINT *s_kappa = EC_POINT_new(group);
+        EC_POINT *c_kappa = EC_POINT_new(group);
+        EC_POINT *zero = EC_POINT_new(group);
 
-        BIGNUM *zero = BN_new();
-        BN_dec2bn(&zero, "0");
-
-
-        /* err = gen_schnorr_params(dsa, &params);
-        if(err != 1)
+        BN_CTX *ctx = BN_CTX_secure_new();
+        if(!ctx)
         {
-            printf(" * Failed to generate Schnorr parameters!\n");
+            printf(" * Failed to genetare CTX!\n");
             return_code = 0;
             goto end;
         }
-        printf("--- PARAMETERS ---\nG: %s\nQ: %s\n", BN_bn2dec(params.g), BN_bn2dec(params.q)); /
-        
 
-        err = gen_schnorr_keys(dsa, &keys_s);
+        err = gen_schnorr_keychain(group, &s_keychain);
         if(err != 1)
         {
-            printf(" * Failed to generate server's Schnorr keychain!\n");
+            printf(" * Failed to generate EC parameters!\n");
             return_code = 0;
-            goto end;
+            goto final;
         }
-        printf("\n--- KEYS SERVER --- \nPK: %s\nSK: %s\n", BN_bn2dec(keys_s.pk), BN_bn2dec(keys_s.sk));
-        
+        init_schnorr_signature(group, &s_signature);
 
-        err = gen_schnorr_keys(dsa, &keys_c);
+        err = gen_schnorr_keychain(group, &c_keychain);
         if(err != 1)
         {
-            printf(" * Failed to generate client's Schnorr keychain!\n");
+            printf(" * Failed to generate EC parameters!\n");
             return_code = 0;
-            goto end;
+            goto final;
         }
-        printf("\n--- KEYS CLIENT--- \nPK: %s\nSK: %s\n", BN_bn2dec(keys_c.pk), BN_bn2dec(keys_c.sk));
-
-
+        init_schnorr_signature(group, &c_signature);
 
         while(stop <= 10) {
             err = 0;
-            BN_dec2bn(&kappa_s, "1");
-            BN_dec2bn(&kappa_c, "1");
-
-            printf("\n\n~ TRY N#%d ~\n\n--- SIGNATURE SERVER ---\n", stop);
-            err = schnorr_sign(g_globals.params, keys_s.sk, message, zero, &sign_s); // &params
+            err = rand_point(group, s_kappa); // EC_POINT_new(group);
             if(err != 1)
             {
-                printf(" * Schnorr server signin failed!\n");
+                printf(" * Failed to set S_KAPPA!\n");
                 return_code = 0;
                 goto end;
             }
-            
-            printf("SIGNATURE: %s\nHASH: %s\n", BN_bn2dec(sign_s.signature), BN_bn2dec(sign_s.hash));
-            err = schnorr_verify(g_globals.params, keys_s.pk, message, zero, &sign_s); // &params
+
+            err = rand_point(group, c_kappa); // EC_POINT_new(group);
             if(err != 1)
             {
-                printf(" * Schnorr server signature verification failed!\n");
+                printf(" * Failed to set C_KAPPA!\n");
+                return_code = 0;
+                goto end;
+            }
+
+            printf("\n\n~ TRY N#%d ~\n\n--- SIGNATURE SERVER ---\n", stop);
+            err = schnorr_sign(&s_keychain, EC_KEY_get0_private_key(s_keychain.keys), message, zero, &s_signature);
+            if(err != 1)
+            {
+                printf(" * EC Schnorr sign failed!\n");
                 return_code = 0;
                 goto end;
             }
             else
             {
-                printf(" * Verification proceeded! :)\n");
+                printf(" * Server signature created!\n    |--> SIG: %s\n", BN_bn2dec(s_signature.signature));
             }
 
-
-            printf("\n--- SIGNATURE CLIENT ---\n");
-            BN_copy(sign_c.c_prime, sign_s.c_prime);
-            err = schnorr_sign(g_globals.params, keys_c.sk, message, kappa_c, &sign_c); // &params
+            err = schnorr_verify(&s_keychain, EC_KEY_get0_public_key(s_keychain.keys), message, zero, &s_signature);
             if(err != 1)
             {
-                printf(" * Schnorr client signin failed!\n");
+                printf(" * EC Schnorr sign failed!\n");
                 return_code = 0;
                 goto end;
             }
-            printf("SIGNATURE: %s\nHASH: %s\n\nKAPPA_C: %s\n", BN_bn2dec(sign_c.signature), BN_bn2dec(sign_c.hash), BN_bn2dec(kappa_c));
+            else
+            {
+                printf(" * Server verification successful! :)\n");
+            }
 
-            BN_copy(sign_c.r, sign_s.r);
-            err = schnorr_verify(g_globals.params, keys_c.pk, message, kappa_s, &sign_c); // &params
-            printf("KAPPA_S: %s\n", BN_bn2dec(kappa_s));
-            if(BN_cmp(kappa_c, kappa_s) != 0)
+            printf("\n--- SIGNATURE CLIENT ---\n");
+            EC_POINT_copy(c_signature.c_prime, s_signature.c_prime);
+            err = schnorr_sign(&c_keychain, EC_KEY_get0_private_key(c_keychain.keys), message, c_kappa, &c_signature);
+            if(err != 1)
+            {
+                printf(" * EC Schnorr sign failed!\n");
+                return_code = 0;
+                goto end;
+            }
+            else
+            {
+                printf(" * Server signature created!\n    |--> SIG: %s\n", BN_bn2dec(c_signature.signature));
+            }
+
+            BN_copy(c_signature.r, s_signature.r);
+            err = schnorr_verify(&c_keychain, EC_KEY_get0_public_key(c_keychain.keys), message, s_kappa, &c_signature);
+            if(EC_POINT_cmp(group, c_kappa, s_kappa, ctx) != 0)
             {
                 printf(" * Schnorr client signature verification failed!\n");
                 return_code = 0;
@@ -402,30 +409,29 @@ end:
     end:
         printf("\n\nRETURN_CODE: %u\n\n", return_code);
 
-        //free_schnorr_params(&params);
-        free_schnorr_keychain(&keys_c);
-        free_schnorr_keychain(&keys_s);
-        free_schnorr_signature(&sign_c);
-        free_schnorr_signature(&sign_s);
-        BN_free(kappa_c);
-        BN_free(kappa_s);
-        BN_free(zero);
+        EC_POINT_free(s_kappa);
+        EC_POINT_free(c_kappa);
+
+        free_schnorr_keychain(&s_keychain);
+        free_schnorr_signature(&s_signature);
+        free_schnorr_keychain(&c_keychain);
+        free_schnorr_signature(&c_signature);
     //*/
 
     /*  PAILLIER test   
         printf("\n\n---PAILLIER test---\n");
 
+        cJSON *json_noise = cJSON_CreateObject();
+        cJSON *json_message = cJSON_CreateObject();
+
         BIGNUM *enc = BN_new();
         BIGNUM *dec = BN_new();
 
-        BIGNUM *zero1 = BN_new();
-        BIGNUM *zero2 = BN_new();
-        BN_dec2bn(&zero1, "0");
-        BN_dec2bn(&zero2, "0");
+        BIGNUM *p_message = BN_new();
+        BIGNUM *p_noise = BN_new();
 
-        struct paillier_Keychain p_keyring;
-        init_paillier_keychain(&p_keyring);
-        if(&p_keyring == NULL)
+        init_paillier_keychain(&g_paiKeys);
+        if(&g_paiKeys == NULL)
         {
             printf(" * Failed to init PAILLIER KEYCHAIN!\n");
             return_code = 0;
@@ -433,29 +439,56 @@ end:
         }
 
         // INIT KEYS
-        err = paillier_generate_keypair(&p_keyring);
-        if(err != 1)
+        if (access(file_keychain, F_OK) || access(file_precomputed_noise, F_OK) || access(file_precomputed_message, F_OK))
         {
-            printf(" * Failed to generate Paillier Keypair!\n");
-            return_code = 0;
-            goto end;
+            err = paillier_generate_keypair(&g_paiKeys);
+            if(err != 1)
+            {
+                printf(" * Keychain generation failed!\n");
+                return 0;
+            }
+
+            err = write_keys(file_keychain, &g_paiKeys);
+            if(err != 0)
+            {
+                printf(" * Save keychain to file failed!\n");
+                return 0;
+            }
+
+            threaded_precomputation();
+            
+            for (int i = 0; i < NUM_THREADS; i++)
+            {
+                pthread_join(threads[i], NULL);
+            }
         }
-        printf("ERR: %u\nKEYS:\n|--> L: %s\n|--> MI: %s\n|--> N: %s\n|--> N_SQ: %s\n|--> G: %s\n", err, BN_bn2dec(p_keyring.sk->lambda),
-            BN_bn2dec(p_keyring.sk->mi), BN_bn2dec(p_keyring.pk->n), BN_bn2dec(p_keyring.pk->n_sq), BN_bn2dec(p_keyring.pk->g));
+        else
+        {
+            read_keys(file_keychain, &g_paiKeys);
+        }
+
+        printf("ERR: %u\nKEYS:\n|--> L: %s\n|--> MI: %s\n|--> N: %s\n|--> N_SQ: %s\n|--> G: %s\n", err, BN_bn2dec(g_paiKeys.sk->lambda),
+            BN_bn2dec(g_paiKeys.sk->mi), BN_bn2dec(g_paiKeys.pk->n), BN_bn2dec(g_paiKeys.pk->n_sq), BN_bn2dec(g_paiKeys.pk->g));
         printf("\n\nSECRET: %s\n", BN_bn2dec(message));
 
-        // ENCRYPTION
-        err = paillier_encrypt(p_keyring.pk, message, enc, zero1, zero2);
+        json_noise = parse_JSON(file_precomputed_noise);
+        json_message = parse_JSON(file_precomputed_message);
+
+        
+        printf("\nNO PRECOMPUTATION:\n");
+        pre_message = 0;
+        pre_noise = 0;
+        err = set_precomps(message, p_message, p_noise);
+        printf(">> PM: %s\n>> PN: %s\n", BN_bn2dec(p_message), BN_bn2dec(p_noise));
+        
+        err = paillier_encrypt(g_paiKeys.pk, message, enc, p_message, p_noise);
         if(err != 1)
         {
             printf(" * Failed to process the encryption with Paillier!\n");
             return_code = 0;
             goto end;
         }
-        printf("ENC: %s\n", BN_bn2dec(enc));
-
-        // DECRYPTION
-        err = paillier_decrypt(&p_keyring, enc, dec);
+        err = paillier_decrypt(&g_paiKeys, enc, dec);
         if(err != 1)
         {
             printf(" * Failed to process the decryption with Paillier!\n");
@@ -463,6 +496,76 @@ end:
             goto end;
         }
         printf("DEC: %s\n", BN_bn2dec(dec));
+
+
+        printf("\nMESSAGE PRECOMPUTATION:\n");
+        pre_message = 1;
+        pre_noise = 0;
+        err = set_precomps(message, p_message, p_noise);
+        printf(">> PM: %s\n>> PN: %s\n", BN_bn2dec(p_message), BN_bn2dec(p_noise));
+
+        err = paillier_encrypt(g_paiKeys.pk, message, enc, p_message, p_noise);
+        if(err != 1)
+        {
+            printf(" * Failed to process the encryption with Paillier!\n");
+            return_code = 0;
+            goto end;
+        }
+        err = paillier_decrypt(&g_paiKeys, enc, dec);
+        if(err != 1)
+        {
+            printf(" * Failed to process the decryption with Paillier!\n");
+            return_code = 0;
+            goto end;
+        }
+        printf("DEC: %s\n", BN_bn2dec(dec));
+
+
+        printf("\nNOISE PRECOMPUTATION:\n");
+        pre_message = 0;
+        pre_noise = 1;
+        err = set_precomps(message, p_message, p_noise);
+        printf(">> PM: %s\n>> PN: %s\n", BN_bn2dec(p_message), BN_bn2dec(p_noise));
+
+        err = paillier_encrypt(g_paiKeys.pk, message, enc, p_message, p_noise);
+        if(err != 1)
+        {
+            printf(" * Failed to process the encryption with Paillier!\n");
+            return_code = 0;
+            goto end;
+        }
+        err = paillier_decrypt(&g_paiKeys, enc, dec);
+        if(err != 1)
+        {
+            printf(" * Failed to process the decryption with Paillier!\n");
+            return_code = 0;
+            goto end;
+        }
+        printf("DEC: %s\n", BN_bn2dec(dec));
+
+
+        printf("\nBOTH PRECOMPUTATION:\n");
+        pre_message = 1;
+        pre_noise = 1;
+        err = set_precomps(message, p_message, p_noise); 
+        printf(">> PM: %s\n>> PN: %s\n", BN_bn2dec(p_message), BN_bn2dec(p_noise));
+
+        err = paillier_encrypt(g_paiKeys.pk, message, enc, p_message, p_noise);
+        if(err != 1)
+        {
+            printf(" * Failed to process the encryption with Paillier!\n");
+            return_code = 0;
+            goto end;
+        }
+        err = paillier_decrypt(&g_paiKeys, enc, dec);
+        if(err != 1)
+        {
+            printf(" * Failed to process the decryption with Paillier!\n");
+            return_code = 0;
+            goto end;
+        }
+        printf("DEC: %s\n", BN_bn2dec(dec));
+
 
         printf("\n\n---PAILLIER HOMOMORPHY test---\n");
         err = test_homomorphy();
@@ -475,12 +578,11 @@ end:
     end:
         printf("\n\nRETURN_CODE: %u\n", return_code);
 
-        free_paillier_keychain(&p_keyring);
-        BN_free(message);
+        free_paillier_keychain(&g_paiKeys);
         BN_free(enc);
         BN_free(dec);
-        BN_free(zero1);
-        BN_free(zero2);
+        BN_free(p_message);
+        BN_free(p_noise);
     //*/
 
     /*  HASH test   
@@ -499,7 +601,7 @@ end:
             }
             printf("I: %d\tHASH: %s\n", i+1, BN_bn2dec(res));
         }
-    
+
     end:
         BN_free(res);
         BN_free(one);
@@ -508,16 +610,16 @@ end:
 
     /*  PRE-COMPUTATION test    
         BIGNUM *result = BN_new();
-        range = BN_new();
+        g_range = BN_new();
         cJSON *json_noise = cJSON_CreateObject();
         cJSON *json_message = cJSON_CreateObject();
         unsigned char *tmp_string = (char*)malloc(sizeof(char)*BUFFER/2);
 
         sprintf(tmp_string, "%d", RANGE);
-        BN_dec2bn(&range, tmp_string);
+        BN_dec2bn(&g_range, tmp_string);
 
         init_paillier_keychain(&g_paiKeys);
-        
+
         if (access(file_precomputed_noise, F_OK) || access(file_precomputed_message, F_OK))
         {
             if (!paillier_generate_keypair(&g_paiKeys))
@@ -553,7 +655,7 @@ end:
         else
             printf("FOUND!\n|---> SECRET: %s\n|---> RESULT: %s\n", BN_bn2dec(message), BN_bn2dec(result));
         json_message = parse_JSON(file_precomputed_message);
-    
+
     end:
         free_paillier_keychain(&g_paiKeys);
         BN_free(result);
@@ -562,9 +664,11 @@ end:
     //*/
 
 final:
+
+    EC_GROUP_free(group);
     BN_free(message);
-    BN_free(pk_c);
-    DSA_free(dsa);
+    free(tmp_str);
+    BN_free(g_range);
 
     return return_code;
 }
