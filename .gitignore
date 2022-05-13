@@ -1,6 +1,5 @@
 # libraries folder
 openssl/
-EC/
 
 # binary files
 GUI
@@ -16,6 +15,9 @@ AKA
 paramgen
 openssl_bn
 schnorrs_signature
+
+# LOG files
+*.log
 
 # Prerequisites
 *.d

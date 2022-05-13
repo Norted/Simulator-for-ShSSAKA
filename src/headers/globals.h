@@ -1,5 +1,5 @@
-#ifndef __GLOBALS_H__
-#define __GLOBALS_H__
+#ifndef __GLOBALS_EC_H__
+#define __GLOBALS_EC_H__
 
 // ======== MACROS ======================================================================
 #define NUM_THREADS 2
@@ -17,9 +17,9 @@
 #include <math.h>
 #include <limits.h>
 #include <string.h>
+#include <unistd.h>
 #include <openssl/bn.h>
 #include <openssl/sha.h>
-#include <openssl/dsa.h>
 #include <openssl/ec.h>
 #include <openssl/obj_mac.h>
 #include <cjson/cJSON.h>
@@ -47,12 +47,31 @@ struct paillier_Keychain
     struct paillier_PublicKey *pk;
 };
 
-// SCHNORR STRUCTS
-struct schnorr_Params
+// SIGNS & PROOFS STRUCTS
+struct ServerSign
 {
-    BIGNUM *p;
-    BIGNUM *q;
-    BIGNUM *g;
+    BIGNUM *tau_s;
+    EC_POINT *kappa;
+};
+
+struct ClientProof
+{
+    BIGNUM *tau_c;
+    struct schnorr_Signature *signature;
+    EC_POINT *kappa;
+};
+
+struct DeviceProof
+{
+    BIGNUM *s_i;
+    const EC_POINT *kappa_i;
+};
+
+// SCHNORR STRUCTS
+struct schnorr_Keychain
+{
+    const EC_GROUP *ec_group;
+    const EC_KEY *keys;
 };
 
 struct schnorr_Signature
@@ -60,76 +79,48 @@ struct schnorr_Signature
     BIGNUM *hash;
     BIGNUM *signature;
     BIGNUM *r;
-    BIGNUM *c_prime;
+    EC_POINT *c_prime;
 };
 
-struct schnorr_Keychain
-{
-    BIGNUM *pk;
-    BIGNUM *sk;
-};
-
-// SIGNS & PROOFS STRUCTS
-struct ServerSign
-{
-    BIGNUM *tau_s;
-    BIGNUM *kappa;
-};
-
-struct ClientProof
-{
-    BIGNUM *tau_c;
-    struct schnorr_Signature *signature;
-    BIGNUM *kappa;
-};
-
-struct DeviceProof
-{
-    BIGNUM *s_i;
-    BIGNUM *kappa_i;
-};
-
-// AKA STRUCTS
+// AKA STRUCT
 struct aka_Keychain
 {
     struct schnorr_Keychain *keys;
     unsigned int ID;
 };
 
-// SSAKA STRUCTS
+// SSAKA STRUCT
 struct ssaka_Keychain
 {
     unsigned int ID;
-    struct schnorr_Keychain *keys;
+    BIGNUM *sk;
+    BIGNUM *pk;
     BIGNUM *kappa;
 };
 
 // GLOBALS STRUCT
 struct globals
 {
-    struct schnorr_Params *params; // Schnorr's Signature struct with p, q, g params
-    unsigned int idCounter;        // helping couter for CID generation
+    struct schnorr_Keychain *keychain;
+    unsigned int idCounter;
 };
 
 // ======== EXTERNS =====================================================================
 extern struct globals g_globals;
-
-// Keychains
 extern struct ssaka_Keychain g_ssaka_devicesKeys[];
 extern struct aka_Keychain g_serverKeys;
 extern struct aka_Keychain g_aka_clientKeys;
-extern struct paillier_Keychain g_paiKeys;
-
-// Support globals
 extern unsigned int currentNumberOfDevices;
-extern BIGNUM *pk_c;
-extern DSA *dsa;
+extern struct paillier_Keychain g_paiKeys;
+extern EC_POINT *pk_c;
 
 // Threding and pre-computation
 pthread_t threads[NUM_THREADS];
-extern BIGNUM *range;
+extern BIGNUM *g_range;
+extern unsigned int paillier_inited;
 extern unsigned int pre_noise;
 extern unsigned int pre_message;
+extern const char *restrict file_keychain;
 extern const char *restrict file_precomputed_noise;
 extern const char *restrict file_precomputed_message;
 cJSON *json_noise;

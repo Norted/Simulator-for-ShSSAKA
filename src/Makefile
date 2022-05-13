@@ -11,7 +11,7 @@ HEADERS = 	$(wildcard ./headers/*.h)
 
 OBJS = $(SOURCES: .c=.o)
 
-all: clean main_test # GUI
+all: clean GUI # main_test
 
 GUI: $(OBJS) $(HEADERS)
 	$(CC) $(CFLAGS) $(SOURCES) $(GTKINCLUDE) $(INCLUDE) GUI.c $(GTKLIB) -o $@
