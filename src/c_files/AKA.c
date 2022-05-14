@@ -20,20 +20,20 @@ unsigned int aka_setup()
 
     printf("---SERVER---\n");
     init_aka_mem(&g_serverKeys);
-    if (!g_serverKeys.ID || !g_serverKeys.keys)
+    /* if (!g_serverKeys.ID || !g_serverKeys.keys)
     {
         printf(" * AKA server key initialization failed! (AKA, aka_setup)\n");
         return 0;
-    }
+    } */
     aka_keyPrinter(&g_serverKeys);
 
     printf("\n---CLIENT---\n");
     init_aka_mem(&g_aka_clientKeys);
-    if (!g_aka_clientKeys.ID || !g_aka_clientKeys.keys)
+    /* if (!g_aka_clientKeys.ID || !g_aka_clientKeys.keys)
     {
         printf(" * AKA client key initialization failed! (AKA, aka_setup)\n");
         return 0;
-    }
+    } */
     aka_keyPrinter(&g_aka_clientKeys);
 
     printf("\n");
@@ -53,11 +53,11 @@ unsigned int aka_serverSignVerify(BIGNUM *Y, struct ServerSign *server)
     }
 
     BN_CTX *ctx = BN_CTX_secure_new();
-    if(!ctx)
+    /* if(!ctx)
     {
         printf(" * Failed to generate CTX! (aka_serverSignVerify, AKA)\n");
         return 0;
-    }
+    } */
 
     unsigned char *ver = (char *)malloc(sizeof(char) * BUFFER);
     struct ClientProof client;
@@ -67,11 +67,11 @@ unsigned int aka_serverSignVerify(BIGNUM *Y, struct ServerSign *server)
     init_schnorr_signature(g_globals.keychain->ec_group, &signature);
 
     err = schnorr_sign(g_globals.keychain->ec_group, EC_KEY_get0_private_key(g_serverKeys.keys->keys), Y, EC_POINT_new(g_globals.keychain->ec_group), &signature);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Schnorr's signature failed! (AKA, aka_serverSignVerify)\n");
         goto end;
-    }
+    } */
 
     /*
      *  Server  →   (Y, sigma)      →   Client
@@ -89,11 +89,11 @@ unsigned int aka_serverSignVerify(BIGNUM *Y, struct ServerSign *server)
 
     BN_copy(client.signature->r, signature.r);
     err = rand_point(g_globals.keychain->ec_group, server->kappa);
-    if(err != 1)
+    /* if(err != 1)
     {
         printf(" * Failed to initialize server KAPPA! (AKA, aka_clientProofVerify)\n");
         goto end;
-    }
+    } */
     sprintf(ver, "%d", schnorr_verify(g_globals.keychain->ec_group, EC_KEY_get0_public_key(g_aka_clientKeys.keys->keys), Y, server->kappa, client.signature));
     BN_dec2bn(&server->tau_s, ver);
 
@@ -123,18 +123,18 @@ unsigned int aka_clientProofVerify(BIGNUM *Y, struct schnorr_Signature *server_s
     }
 
     err = rand_point(g_globals.keychain->ec_group, client->kappa);
-    if(err != 1)
+    /* if(err != 1)
     {
         printf(" * Failed to initialize client KAPPA! (AKA, aka_clientProofVerify)\n");
         goto end;
-    }
+    } */
     EC_POINT_copy(client->signature->c_prime, server_signature->c_prime);
     err = schnorr_sign(g_globals.keychain->ec_group, EC_KEY_get0_private_key(g_aka_clientKeys.keys->keys), Y, client->kappa, client->signature);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Client proof verification failed! (AKA, aka_clientProofVerify)\n");
         goto end;
-    }
+    } */
 
 end:
     free(ver);
@@ -159,11 +159,11 @@ void free_aka_mem(struct aka_Keychain *keychain)
 void aka_keyPrinter(struct aka_Keychain *key)
 {
     BN_CTX *ctx = BN_CTX_secure_new();
-    if(!ctx)
+    /* if(!ctx)
     {
         printf(" * Failed to generate CTX! (aka_keyPrinter, AKA)\n");
         return;
-    }
+    } */
     BIGNUM *pk_x = BN_new();
     BIGNUM *pk_y = BN_new();
 

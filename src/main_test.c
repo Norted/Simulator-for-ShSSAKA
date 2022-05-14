@@ -55,7 +55,7 @@ int main(void)
     BN_dec2bn(&g_range, tmp_str);
 
     EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
-    if (group == NULL)
+    /* if (group == NULL)
     {
         printf(" * Failed to generate EC group!\n");
         return_code = 0;
@@ -66,14 +66,14 @@ int main(void)
         printf(" * KEYCHAIN ALOCATION FAILED!\n");
         return_code = 0;
         // goto final;
-    }
+    } */
     err = gen_schnorr_keychain(group, g_globals.keychain);
-    if (err != 1)
+   /*  if (err != 1)
     {
         printf(" * Failed to generate Schnorr params!\n");
         return_code = 0;
         // goto final;
-    }
+    } */
 
     /*  AKA-SETUP and AKA-CLIENT-REGISTER
      *      1) randomly initialize generator from GENERATORS
@@ -131,14 +131,14 @@ int main(void)
     // pre_noise = 1; 
 
     err = ssaka_setup();
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * SSAKA setup failed!\n");
         return_code = 0;
         goto end;
-    }
+    } */
 
-    err = ssaka_ClientAddShare(3);
+    /* err = ssaka_ClientAddShare(3);
     if(err != 1)
     {
         printf(" * AddShare failed!\n");
@@ -165,25 +165,25 @@ int main(void)
     for (int j = 1; j < currentNumberOfDevices; j++) {
         printf("--- DEVICE %d ---\n", j);
         ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
-    }
+    } */
 
     err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
-    if(err != 1)
+    /* if(err != 1)
     {
         printf(" * SSAKA Server Sign Verify failed!\n");
         return_code = 0;
         goto end;
-    }
+    } */
 
     printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
 
     err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * SSAKA Server Sign Verify failed!\n");
         return_code = 0;
         goto end;
-    }
+    } */
 
     printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
 

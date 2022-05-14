@@ -4,24 +4,24 @@ unsigned int paillier_generate_keypair(struct paillier_Keychain *keychain)
 {
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
-    if (!ctx)
+    /* if (!ctx)
     {
         printf(" * Falied to generate CTX! (generate keypair, paillier_scheme)\n");
         return err;
-    }
+    } */
 
     err = gen_pqg_params(keychain->sk->p, keychain->sk->q, keychain->sk->lambda, keychain->pk);
-    if(err != 1)
+    /* if(err != 1)
     {
         printf(" * Generate P, Q, G, params failed! (generate keypair, paillier_scheme)\n");
         goto end;
-    }
+    } */
     err = count_mi(keychain->sk->mi, keychain->pk->g, keychain->sk->lambda, keychain->pk->n_sq, keychain->pk->n);
-    if(err != 1)
+    /* if(err != 1)
     {
         printf(" * Count MI failed! (generate keypair, paillier_scheme)\n");
         goto end;
-    }
+    } */
 
 end:
     BN_CTX_free(ctx);
@@ -32,11 +32,11 @@ unsigned int paillier_encrypt(struct paillier_PublicKey *pk, BIGNUM *plain, BIGN
 {
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
-    if (!ctx)
+    /* if (!ctx)
     {
         printf(" * Falied to generate CTX! (encrypt, paillier_scheme)\n");
         return err;
-    }
+    } */
 
     BIGNUM *tmp_rnd = BN_new();
 
@@ -49,35 +49,35 @@ unsigned int paillier_encrypt(struct paillier_PublicKey *pk, BIGNUM *plain, BIGN
     if (BN_is_zero(precomp_message) == 1)
     {
         err = BN_mod_exp(precomp_message, pk->g, plain, pk->n_sq, ctx);
-        if(err != 1)
+        /* if(err != 1)
         {
             printf(" * Message mod_exp operation falied! (encrypt, paillier_scheme)\n");
             goto end;
-        }
+        } */
     }
     
     if (BN_is_zero(precomp_noise) == 1)
     {
         err = generate_rnd_paillier(pk->n, pk->n, tmp_rnd);
-        if(err != 1)
+        /* if(err != 1)
         {
             printf(" * Generate random falied! (encrypt, paillier_scheme)\n");
             goto end;
-        }
+        } */
         err = BN_mod_exp(precomp_noise, tmp_rnd, pk->n, pk->n_sq, ctx);
-        if(err != 1)
+        /* if(err != 1)
         {
             printf(" * Noise mod_exp operation falied! (encrypt, paillier_scheme)\n");
             goto end;
-        }
+        } */
     }
 
     err = BN_mod_mul(cipher, precomp_message, precomp_noise, pk->n_sq, ctx);
-    if(err != 1)
+    /* if(err != 1)
     {
         printf(" * Multiplication of message and noise falied! (encrypt, paillier_scheme)\n");
         goto end;
-    }
+    } */
 
 end:
     BN_free(tmp_rnd);
@@ -90,32 +90,32 @@ unsigned int paillier_decrypt(struct paillier_Keychain *keychain, BIGNUM *cipher
 {
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
-    if (!ctx)
+    /* if (!ctx)
     {
         printf(" * Falied to generate CTX! (decrypt, paillier_scheme)\n");
         return err;
-    }
+    } */
 
     BIGNUM *u = BN_new();
 
     err = BN_mod_exp(u, cipher, keychain->sk->lambda, keychain->pk->n_sq, ctx);
-    if(err != 1)
+    /* if(err != 1)
     {
         printf(" * Cipher mod_exp operation failed! (decrypt, paillier_scheme)\n");
         goto end;
-    }
-    err = L(u, keychain->pk->n, u, ctx);
-    if(err != 1)
+    } */
+    err = L(u, keychain->pk->n, u);
+    /* if(err != 1)
     {
         printf(" * L function failed! (decrypt, paillier_scheme)\n");
         goto end;
-    }
+    } */
     err = BN_mod_mul(plain, u, keychain->sk->mi, keychain->pk->n, ctx);
-    if(err != 1)
+    /* if(err != 1)
     {
         printf(" * Cipher mod_mul operation failed! (decrypt, paillier_scheme)\n");
         goto end;
-    }
+    } */
 
 end:
     BN_free(u);
@@ -161,8 +161,8 @@ void free_paillier_keychain(struct paillier_Keychain *keychain)
 unsigned int homomorphy_add(struct paillier_PublicKey *pk, BIGNUM *enc_1, BIGNUM *enc_2, BIGNUM *res)
 {
     BN_CTX *ctx = BN_CTX_secure_new();
-    if (!ctx)
-        return 0;
+    /* if (!ctx)
+        return 0; */
     
     unsigned int err = BN_mod_mul(res, enc_1, enc_2, pk->n_sq, ctx);
 
@@ -173,8 +173,8 @@ unsigned int homomorphy_add(struct paillier_PublicKey *pk, BIGNUM *enc_1, BIGNUM
 unsigned int homomorphy_add_const(struct paillier_PublicKey *pk, BIGNUM *enc_value, BIGNUM *constant, BIGNUM *res)
 {
     BN_CTX *ctx = BN_CTX_secure_new();
-    if (!ctx)
-        return 0;
+    /* if (!ctx)
+        return 0; */
     
     unsigned int err = 0;
     BIGNUM *p_1 = BN_new();
@@ -191,8 +191,8 @@ unsigned int homomorphy_add_const(struct paillier_PublicKey *pk, BIGNUM *enc_val
 unsigned int homomorphy_mul_const(struct paillier_PublicKey *pk, BIGNUM *enc_value, BIGNUM *constant, BIGNUM *res)
 {
     BN_CTX *ctx = BN_CTX_secure_new();
-    if (!ctx)
-        return 0;
+    /* if (!ctx)
+        return 0; */
     
     unsigned int err = BN_mod_exp(res, enc_value, constant, pk->n_sq, ctx);
 

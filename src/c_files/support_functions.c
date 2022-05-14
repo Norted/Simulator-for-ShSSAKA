@@ -5,11 +5,11 @@ unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *lambda, struct paillie
     unsigned int err = 0;
 
     BN_CTX *ctx = BN_CTX_secure_new();
-    if (!ctx)
+    /* if (!ctx)
     {
         printf(" * Failed to generate CTX! (gen_pqg_params, support_functions)\n");
         return 0;
-    }
+    } */
 
     BIGNUM *p_sub = BN_new();
     BIGNUM *q_sub = BN_new();
@@ -25,49 +25,49 @@ unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *lambda, struct paillie
     for (i; i < MAXITER; i++)
     {
         err = BN_generate_prime_ex(p, BITS, 1, NULL, NULL, NULL);
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * Gereation of a P prime failed! (gen_pqg_params, support_functions)\n");
             goto end;
-        }
+        } */
         err = BN_generate_prime_ex(q, BITS, 1, NULL, NULL, NULL);
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * Gereation of a Q prime failed! (gen_pqg_params, support_functions)\n");
             goto end;
-        }
+        } */
         err = BN_mul(pk->n, p, q, ctx);
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * Computation of N failed! (gen_pqg_params, support_functions)\n");
             goto end;
-        }
+        } */
 
         err = BN_sub(p_sub, p, BN_value_one());
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * Substraction of P failed! (gen_pqg_params, support_functions)\n");
             goto end;
-        }
+        } */
         err = BN_sub(q_sub, q, BN_value_one());
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * Substraction of Q failed! (gen_pqg_params, support_functions)\n");
             goto end;
-        }
+        } */
         err = BN_mul(pq_sub, p_sub, q_sub, ctx);
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * Multiplication of P_SUB and Q_SUB failed! (gen_pqg_params, support_functions)\n");
             goto end;
-        }
+        } */
 
         err = BN_gcd(tmp_gcd, pk->n, pq_sub, ctx);
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * Computation of GCD(N, PQ_SUB) failed! (gen_pqg_params, support_functions)\n");
             goto end;
-        }
+        } */
 
         if (BN_is_one(tmp_gcd) == 1)
             break;
@@ -80,55 +80,55 @@ unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *lambda, struct paillie
     }
 
     err = BN_exp(pk->n_sq, pk->n, two, ctx);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Computation of N^2 failed! (gen_pqg_params, support_functions)\n");
         goto end;
-    }
+    } */
     err = lambda_computation(p, q, lambda);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Computation of LAMBDA failed! (gen_pqg_params, support_functions)\n");
         goto end;
-    }
+    } */
 
     for (i = 0; i < MAXITER; i++)
     {
         err = rand_range(tmp_g, pk->n_sq);
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * Generation of random G failed! (gen_pqg_params, support_functions)\n");
             goto end;
-        }
+        } */
         err = BN_gcd(tmp_gcd, tmp_g, pk->n_sq, ctx);
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * Computation of GCD(G, N^2) failed! (gen_pqg_params, support_functions)\n");
             goto end;
-        }
+        } */
         if (BN_is_one(tmp_gcd) != 1)
         {
             continue;
         }
 
         err = BN_mod_exp(tmp_u, tmp_g, lambda, pk->n_sq, ctx);
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * Computation of U failed! (gen_pqg_params, support_functions)\n");
             goto end;
-        }
+        } */
         err = L(tmp_u, pk->n, tmp_u);
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * Computation of L(U) failed! (gen_pqg_params, support_functions)\n");
             goto end;
-        }
+        } */
         err = BN_gcd(tmp_gcd, tmp_u, pk->n, ctx);
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * Computation of GCD(U, N) failed! (gen_pqg_params, support_functions)\n");
             goto end;
-        }
+        } */
         if (BN_is_one(tmp_gcd) == 1)
         {
             BN_copy(pk->g, tmp_g);
@@ -162,28 +162,28 @@ unsigned int lcm(BIGNUM *a, BIGNUM *b, BIGNUM *res)
     BIGNUM *bn_gcd = BN_new();
     BIGNUM *bn_rem = BN_new();
     BN_CTX *ctx = BN_CTX_secure_new();
-    if (!ctx)
-        return 0;
+    /* if (!ctx)
+        return 0; */
 
     err = BN_mul(bn_mul, a, b, ctx);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Multiplication failed! (lcm, support_functions)\n");
         goto end;
-    }
+    } */
 
     err = BN_gcd(bn_gcd, a, b, ctx);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * GCD failed! (lcm, support_functions)\n");
         goto end;
-    }
+    } */
 
     err = BN_div(res, bn_rem, bn_mul, bn_gcd, ctx);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Division failed! (lcm, support_functions)\n");
-    }
+    } */
 
 end:
     BN_free(bn_mul);
@@ -198,34 +198,35 @@ unsigned int count_mi(BIGNUM *mi, BIGNUM *g, BIGNUM *lambda, BIGNUM *n_sq, BIGNU
 {
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
-    if (!ctx)
+    /* if (!ctx)
     {
         printf(" * Failed to generate CTX!\n");
         return 0;
-    }
+    } */
 
     BIGNUM *u = BN_new();
     BIGNUM *inv = BN_new();
 
     err = BN_mod_exp(u, g, lambda, n_sq, ctx);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Exponentation failed! (count_mi, support_functions)\n");
         goto end;
-    }
+    } */
 
     err = L(u, n, u);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Computation of L(U) failed! (count_mi, support_functions)\n");
         goto end;
-    }
+    } */
 
-    if (!BN_mod_inverse(inv, u, n, ctx))
+    BN_mod_inverse(inv, u, n, ctx);
+    /* if (!BN_mod_inverse(inv, u, n, ctx))
     {
         printf(" * Computation of inverse failed! (count_mi, support_functions)\n");
         goto end;
-    }
+    } */
 
     BN_copy(mi, inv);
 
@@ -241,24 +242,24 @@ unsigned int L(BIGNUM *u, BIGNUM *n, BIGNUM *res)
 {
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
-    if (!ctx)
-        return 0;
+    /* if (!ctx)
+        return 0; */
 
     BIGNUM *rem = BN_new();
 
     err = BN_sub(u, u, BN_value_one());
-    if (err == 0)
+    /* if (err == 0)
     {
         printf(" * Substraction failed! (L, support_functions)\n");
         goto end;
-    }
+    } */
 
     err = BN_div(res, rem, u, n, ctx);
-    if (err == 0)
+    /* if (err == 0)
     {
         printf(" * Division failed! (L, support_functions)\n");
         goto end;
-    }
+    } */
 
 end:
     BN_free(rem);
@@ -273,23 +274,23 @@ unsigned int lambda_computation(BIGNUM *p, BIGNUM *q, BIGNUM *lambda)
     BIGNUM *p_sub = BN_new();
     BIGNUM *q_sub = BN_new();
     err = BN_sub(p_sub, p, BN_value_one());
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Substraction failed! (lambda_computation, support_fuction)\n");
         goto end;
-    }
+    } */
     err = BN_sub(q_sub, q, BN_value_one());
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Substraction failed! (lambda_computation, support_fuction)\n");
         goto end;
-    }
+    } */
     err = lcm(p_sub, q_sub, lambda);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Computation of LCM failed! (lambda_computation, support_fuction)\n");
         goto end;
-    }
+    } */
 
 end:
     BN_free(p_sub);
@@ -302,11 +303,11 @@ unsigned int generate_rnd_paillier(BIGNUM *bn_range, BIGNUM *gcd_chck, BIGNUM *r
 {
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
-    if (!ctx)
+    /* if (!ctx)
     {
         printf(" * Failed to generate CTX!\n");
         return 0;
-    }
+    } */
 
     BIGNUM *tmp_gcd = BN_new();
 
@@ -314,23 +315,23 @@ unsigned int generate_rnd_paillier(BIGNUM *bn_range, BIGNUM *gcd_chck, BIGNUM *r
     for (i; i < MAXITER; i++)
     {
         err = rand_range(random, bn_range);
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * Generation of a random failed! (generate_rnd_paillier, support_functions)\n");
             goto end;
-        }
+        } */
         err = BN_mod(random, random, gcd_chck, ctx);
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * Modulo operation failed! (generate_rnd_paillier, support_functions)\n");
             goto end;
-        }
+        } */
         err = BN_gcd(tmp_gcd, random, gcd_chck, ctx);
-        if (err != 1)
+        /* if (err != 1)
         {
             printf(" * GCD failed! (generate_rnd_paillier, support_functions)\n");
             goto end;
-        }
+        } */
         if (BN_is_one(tmp_gcd) == 1 && BN_is_zero(random) == 0)
             break;
     }
@@ -353,11 +354,11 @@ unsigned int ec_hash(const EC_GROUP *group, BIGNUM *res, BIGNUM *Y, EC_POINT *t_
 
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
-    if (!ctx)
+    /* if (!ctx)
     {
         printf(" * Failed to generate CTX! (ec_hash, support_functions)\n");
         return err;
-    }
+    } */
 
     unsigned char *inbuf = (unsigned char *)calloc(BUFFER * 2, sizeof(unsigned char));
     inbuf[0] = '\0';
@@ -397,17 +398,17 @@ unsigned int rand_range(BIGNUM *rnd, const BIGNUM *bn_range)
     BN_dec2bn(&rnd, "0");
 
     err = BN_sub(range_sub_one, bn_range, BN_value_one());
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Substraction of one failed! (rand_range, support_functions)\n");
         goto end;
-    }
+    } */
     err = BN_rand_range(rnd, range_sub_one);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Generation of random failed! (rand_range, support_functions)\n");
         goto end;
-    }
+    } */
 
 end:
     BN_free(range_sub_one);
@@ -419,31 +420,31 @@ unsigned int rand_point(const EC_GROUP *group, EC_POINT *point)
 {
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
-    if (!ctx)
+    /* if (!ctx)
     {
         printf(" * Failed to generate CTX! (rand_point, support_functions)\n");
         return 0;
-    }
+    } */
     BIGNUM *order = BN_new();
 
     err = EC_GROUP_get_order(group, order, ctx);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Failed to get EC order! (rand_point, support_functions)\n");
         goto end;
-    }
+    } */
     err = BN_rand(order, BN_num_bits(order), 0, 0);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Generate random K failed! (rand_point, support_functions)\n");
         goto end;
-    }
+    } */
     err = EC_POINT_mul(group, point, order, NULL, NULL, ctx);
-    if (err != 1)
+    /* if (err != 1)
     {
         printf(" * Failed to generate point R! (rand_point, support_functions)\n");
         goto end;
-    }
+    } */
 
 end:
     BN_free(order);
@@ -460,11 +461,11 @@ unsigned int set_precomps(BIGNUM *message, BIGNUM *p_message, BIGNUM *p_noise)
     if(pre_message == 1 && BN_cmp(message, g_range) <= 0)
     {
         err = find_value(json_message, message, p_message);
-        if(err != 0)
+        /* if(err != 0)
         {
             printf(" * Find pre-computed value of KAPPA_I failed! (paiShamir_get_ci, paishamir)\n");
             goto end;
-        }
+        } */
         err = 1;
     }
     else
@@ -481,17 +482,17 @@ unsigned int set_precomps(BIGNUM *message, BIGNUM *p_message, BIGNUM *p_noise)
     else
     {
         err = rand_range(tmp_r, g_range);
-        if(err != 1)
+        /* if(err != 1)
         {
             printf(" * Generation of random failed! (paiShamir_get_ci, paishamir)\n");
             goto end;
-        }
+        } */
         err = find_value(json_noise, tmp_r, p_noise);
-        if(err != 0)
+        /* if(err != 0)
         {
             printf(" * Find pre-computed value of generated random failed! (paiShamir_get_ci, paiShamir)\n");
             goto end;
-        }
+        } */
         err = 1;
     }
 
@@ -556,20 +557,20 @@ void *thread_creation(void *threadid)
     if (tid == 0)
     {
         err = precomputation(file_precomputed_message, &g_paiKeys, RANGE, 1);
-        if (err != 0)
+        /* if (err != 0)
         {
             printf(" * Message precomputation failed!\n");
             pthread_exit(NULL);
-        }
+        } */
     }
     else if (tid == 1)
     {
         err = precomputation(file_precomputed_noise, &g_paiKeys, RANGE, 2);
-        if (err != 0)
+        /* if (err != 0)
         {
             printf(" * Noise precomputation failed!\n");
             pthread_exit(NULL);
-        }        
+        }  */       
     }
     else
     {
@@ -599,11 +600,11 @@ cJSON *parse_JSON(const char *restrict file_name)
 {
     cJSON *json = cJSON_CreateObject();
     FILE *file = fopen(file_name, "r");
-    if (file == NULL)
+    /* if (file == NULL)
     {
         printf(" * Opening the file %s failed!\n", file_name);
         return NULL;
-    }
+    } */
 
     fseek(file, 0L, SEEK_END);
     long fileSize = ftell(file);
@@ -614,22 +615,22 @@ cJSON *parse_JSON(const char *restrict file_name)
     memset(jsonStr, 0, fileSize + 1);
 
     int size = fread(jsonStr, sizeof(char), fileSize, file); // Read json string in file
-    if (size == 0)
+    /* if (size == 0)
     {
         printf(" * Failed to read the file %s!\n", file_name);
         fclose(file);
         return 0;
-    }
+    } */
     // printf("%s", jsonStr);
 
     json = cJSON_Parse(jsonStr);
     if (json == NULL)
     {
         const char *error_ptr = cJSON_GetErrorPtr();
-        if (error_ptr != NULL)
+        /* if (error_ptr != NULL)
         {
             printf(" * Error before: %s\n", error_ptr);
-        }
+        } */
     }
 
     /* unsigned char *str = NULL;
