@@ -1,5 +1,5 @@
-#ifndef __SSAKA_H__
-#define __SSAKA_H__
+#ifndef __SHSSAKA_H__
+#define __SHSSAKA_H__
 
 // extern headers
 #include <support_functions.h>

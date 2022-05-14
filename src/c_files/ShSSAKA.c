@@ -1,4 +1,4 @@
-#include <SSAKA.h>
+#include <ShSSAKA.h>
 
 struct ssaka_Keychain g_ssaka_devicesKeys[G_NUMOFDEVICES];
 struct paillier_Keychain g_paiKeys;
@@ -247,7 +247,7 @@ unsigned int ssaka_akaServerSignVerify(unsigned int *list_of_used_devs, unsigned
     init_clientproof(g_globals.keychain->ec_group, &client);
     init_schnorr_signature(g_globals.keychain->ec_group, &signature);
 
-    err = schnorr_sign(g_globals.keychain, EC_KEY_get0_private_key(g_serverKeys.keys->keys), Y, EC_POINT_new(g_globals.keychain->ec_group), &signature);
+    err = schnorr_sign(g_globals.keychain->ec_group, EC_KEY_get0_private_key(g_serverKeys.keys->keys), Y, EC_POINT_new(g_globals.keychain->ec_group), &signature);
     if (err != 1)
     {
         printf(" * Schnorr signature failed! (ssaka_akaServerSignVerify, SSAKA)\n");
@@ -274,7 +274,7 @@ unsigned int ssaka_akaServerSignVerify(unsigned int *list_of_used_devs, unsigned
         printf(" * Failed to initialize server KAPPA! (ssaka_clientProofVerify, SSAKA)\n");
         goto end;
     }
-    sprintf(ver, "%d", schnorr_verify(g_globals.keychain, pk_c, Y, server->kappa, client.signature));
+    sprintf(ver, "%d", schnorr_verify(g_globals.keychain->ec_group, pk_c, Y, server->kappa, client.signature));
     BN_dec2bn(&server->tau_s, ver);
 
     if (EC_POINT_cmp(g_globals.keychain->ec_group, server->kappa, client.kappa, ctx) == 0)
@@ -325,7 +325,7 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
         goto end;
     }
 
-    sprintf(ver, "%d", schnorr_verify(g_globals.keychain, EC_KEY_get0_public_key(g_serverKeys.keys->keys), Y, EC_POINT_new(g_globals.keychain->ec_group), server_signature));
+    sprintf(ver, "%d", schnorr_verify(g_globals.keychain->ec_group, EC_KEY_get0_public_key(g_serverKeys.keys->keys), Y, EC_POINT_new(g_globals.keychain->ec_group), server_signature));
     BN_dec2bn(&client->tau_c, ver);
 
     if (BN_is_zero(client->tau_c) == 1)

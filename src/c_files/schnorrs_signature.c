@@ -4,14 +4,7 @@ unsigned int gen_schnorr_keychain(const EC_GROUP *group, struct schnorr_Keychain
 {
     unsigned int err = 0;
 
-    OSSL_LIB_CTX *ctx = OSSL_LIB_CTX_new();
-    if(!ctx)
-    {
-        printf(" * Failed to generate CTX! (gen_schnorr_keychain, schnorr_signature)\n");
-        return 0;
-    }
-
-    keychain->keys = EC_KEY_new_by_curve_name_ex(ctx, NULL, NID_secp256k1);
+    keychain->keys = EC_KEY_new_by_curve_name(NID_secp256k1);
     keychain->ec_group = group;
     err = EC_KEY_set_group(keychain->keys, keychain->ec_group);
     if (err != 1)
@@ -27,16 +20,14 @@ unsigned int gen_schnorr_keychain(const EC_GROUP *group, struct schnorr_Keychain
     }
 
 end:
-    OSSL_LIB_CTX_free(ctx);
-    
     return err;
 }
 
-unsigned int schnorr_sign(struct schnorr_Keychain *params, const BIGNUM *sk, BIGNUM *message, EC_POINT *kappa, struct schnorr_Signature *signature)
+unsigned int schnorr_sign(EC_GROUP *group, const BIGNUM *sk, BIGNUM *message, EC_POINT *kappa, struct schnorr_Signature *signature)
 {
     unsigned int err = 0;
 
-    EC_POINT *C = EC_POINT_new(params->ec_group);
+    EC_POINT *C = EC_POINT_new(group);
     BIGNUM *mul = BN_new();
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
@@ -47,7 +38,7 @@ unsigned int schnorr_sign(struct schnorr_Keychain *params, const BIGNUM *sk, BIG
 
     if (BN_is_zero(signature->r) == 1)
     {
-        err = rand_range(signature->r, EC_GROUP_get0_order(params->ec_group));
+        err = rand_range(signature->r, EC_GROUP_get0_order(group));
         if (err != 1)
         {
             printf(" * Failed to generate random signature R! (schnorr_sign, schnorrs_signature)\n");
@@ -55,16 +46,16 @@ unsigned int schnorr_sign(struct schnorr_Keychain *params, const BIGNUM *sk, BIG
         }
     }
 
-    err = EC_POINT_mul(params->ec_group, C, signature->r, NULL, NULL, ctx);
+    err = EC_POINT_mul(group, C, signature->r, NULL, NULL, ctx);
     if (err != 1)
     {
         printf(" * Computation G^R mod P failed! (schnorr_sign, schnorrs_signature)\n");
         goto end;
     }
 
-    if (EC_POINT_is_at_infinity(params->ec_group, kappa) != 1)
+    if (EC_POINT_is_at_infinity(group, kappa) != 1)
     {
-        err = EC_POINT_mul(params->ec_group, kappa, NULL, signature->c_prime, signature->r, ctx);
+        err = EC_POINT_mul(group, kappa, NULL, signature->c_prime, signature->r, ctx);
         if (err != 1)
         {
             printf(" * Computation of KAPPA failed! (schnorr_sign, schnorrs_signature)\n");
@@ -72,20 +63,20 @@ unsigned int schnorr_sign(struct schnorr_Keychain *params, const BIGNUM *sk, BIG
         }
     }
 
-    err = ec_hash(params->ec_group, signature->hash, message, C, kappa);
+    err = ec_hash(group, signature->hash, message, C, kappa);
     if (err != 1)
     {
         printf(" * Hash compuatation failed! (schnorr_sign, schnorrs_signature)\n");
         goto end;
     }
 
-    err = BN_mod_mul(mul, sk, signature->hash, EC_GROUP_get0_order(params->ec_group), ctx);
+    err = BN_mod_mul(mul, sk, signature->hash, EC_GROUP_get0_order(group), ctx);
     if (err != 1)
     {
         printf(" * Multiplication of SK with HASH failed! (schnorr_sign, schnorrs_signature)\n");
         goto end;
     }
-    err = BN_mod_sub(signature->signature, signature->r, mul, EC_GROUP_get0_order(params->ec_group), ctx); // modsub -> modadd
+    err = BN_mod_sub(signature->signature, signature->r, mul, EC_GROUP_get0_order(group), ctx); // modsub -> modadd
     if (err != 1)
     {
         printf(" * Signature computation failed! (schnorr_sign, schnorrs_signature)\n");
@@ -100,7 +91,7 @@ end:
     return err;
 }
 
-unsigned int schnorr_verify(struct schnorr_Keychain *params, const EC_POINT *pk, BIGNUM *message, EC_POINT *kappa, struct schnorr_Signature *signature)
+unsigned int schnorr_verify(EC_GROUP *group, const EC_POINT *pk, BIGNUM *message, EC_POINT *kappa, struct schnorr_Signature *signature)
 {
     unsigned int err = 0;
     BIGNUM *hash_prime = BN_new();
@@ -111,16 +102,16 @@ unsigned int schnorr_verify(struct schnorr_Keychain *params, const EC_POINT *pk,
         goto end;
     }
 
-    err = EC_POINT_mul(params->ec_group, signature->c_prime, signature->signature, pk, signature->hash, ctx);
+    err = EC_POINT_mul(group, signature->c_prime, signature->signature, pk, signature->hash, ctx);
     if (err != 1)
     {
         printf(" * Computaion of G^signature mod P failed! (schnorr_verify, schnorrs_signature)\n");
         goto end;
     }
 
-    if (EC_POINT_is_at_infinity(params->ec_group, kappa) != 1)
+    if (EC_POINT_is_at_infinity(group, kappa) != 1)
     {
-        err = EC_POINT_mul(params->ec_group, kappa, NULL, signature->c_prime, signature->r, ctx);
+        err = EC_POINT_mul(group, kappa, NULL, signature->c_prime, signature->r, ctx);
         if (err != 1)
         {
             printf(" * Computation of KAPPA failed! (schnorr_verify, schnorrs_signature)\n");
@@ -128,7 +119,7 @@ unsigned int schnorr_verify(struct schnorr_Keychain *params, const EC_POINT *pk,
         }
     }
 
-    err = ec_hash(params->ec_group, hash_prime, message, signature->c_prime, kappa);
+    err = ec_hash(group, hash_prime, message, signature->c_prime, kappa);
     if (err != 1)
     {
         printf(" * Hash computation failed! (schnorr_verify, schnorrs_signature)\n");

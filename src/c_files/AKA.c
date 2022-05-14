@@ -66,7 +66,7 @@ unsigned int aka_serverSignVerify(BIGNUM *Y, struct ServerSign *server)
     init_clientproof(g_globals.keychain->ec_group, &client);
     init_schnorr_signature(g_globals.keychain->ec_group, &signature);
 
-    err = schnorr_sign(g_globals.keychain, EC_KEY_get0_private_key(g_serverKeys.keys->keys), Y, EC_POINT_new(g_globals.keychain->ec_group), &signature);
+    err = schnorr_sign(g_globals.keychain->ec_group, EC_KEY_get0_private_key(g_serverKeys.keys->keys), Y, EC_POINT_new(g_globals.keychain->ec_group), &signature);
     if (err != 1)
     {
         printf(" * Schnorr's signature failed! (AKA, aka_serverSignVerify)\n");
@@ -94,7 +94,7 @@ unsigned int aka_serverSignVerify(BIGNUM *Y, struct ServerSign *server)
         printf(" * Failed to initialize server KAPPA! (AKA, aka_clientProofVerify)\n");
         goto end;
     }
-    sprintf(ver, "%d", schnorr_verify(g_globals.keychain, EC_KEY_get0_public_key(g_aka_clientKeys.keys->keys), Y, server->kappa, client.signature));
+    sprintf(ver, "%d", schnorr_verify(g_globals.keychain->ec_group, EC_KEY_get0_public_key(g_aka_clientKeys.keys->keys), Y, server->kappa, client.signature));
     BN_dec2bn(&server->tau_s, ver);
 
     if (EC_POINT_cmp(g_globals.keychain->ec_group, server->kappa, client.kappa, ctx) == 0)
@@ -113,7 +113,7 @@ unsigned int aka_clientProofVerify(BIGNUM *Y, struct schnorr_Signature *server_s
     unsigned int err = 0;
     unsigned char *ver = (char *)malloc(sizeof(char) * BUFFER);
 
-    sprintf(ver, "%d", schnorr_verify(g_globals.keychain, EC_KEY_get0_public_key(g_serverKeys.keys->keys), Y, EC_POINT_new(g_globals.keychain->ec_group), server_signature));
+    sprintf(ver, "%d", schnorr_verify(g_globals.keychain->ec_group, EC_KEY_get0_public_key(g_serverKeys.keys->keys), Y, EC_POINT_new(g_globals.keychain->ec_group), server_signature));
     BN_dec2bn(&client->tau_c, ver);
 
     if (BN_is_zero(client->tau_c) == 1)
@@ -129,7 +129,7 @@ unsigned int aka_clientProofVerify(BIGNUM *Y, struct schnorr_Signature *server_s
         goto end;
     }
     EC_POINT_copy(client->signature->c_prime, server_signature->c_prime);
-    err = schnorr_sign(g_globals.keychain, EC_KEY_get0_private_key(g_aka_clientKeys.keys->keys), Y, client->kappa, client->signature);
+    err = schnorr_sign(g_globals.keychain->ec_group, EC_KEY_get0_private_key(g_aka_clientKeys.keys->keys), Y, client->kappa, client->signature);
     if (err != 1)
     {
         printf(" * Client proof verification failed! (AKA, aka_clientProofVerify)\n");

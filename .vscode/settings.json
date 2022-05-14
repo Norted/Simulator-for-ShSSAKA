@@ -13,6 +13,7 @@
         "paishamir.h": "c",
         "paillier_scheme.h": "c",
         "support_functions.h": "c",
-        "globals.h": "c"
+        "globals.h": "c",
+        "shssaka.h": "c"
     }
 }

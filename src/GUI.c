@@ -1,5 +1,5 @@
 //#include <AKA.h>
-#include <SSAKA.h>
+#include <ShSSAKA.h>
 #include <support_functions.h>
 #include <gtk/gtk.h>
 #include <globals.h>

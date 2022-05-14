@@ -3,9 +3,13 @@
 unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *lambda, struct paillier_PublicKey *pk)
 {
     unsigned int err = 0;
+
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
+    {
+        printf(" * Failed to generate CTX! (gen_pqg_params, support_functions)\n");
         return 0;
+    }
 
     BIGNUM *p_sub = BN_new();
     BIGNUM *q_sub = BN_new();
@@ -15,17 +19,18 @@ unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *lambda, struct paillie
     BN_dec2bn(&two, "2");
     BIGNUM *tmp_g = BN_new();
     BIGNUM *tmp_u = BN_new();
+
     unsigned int i = 0;
 
     for (i; i < MAXITER; i++)
     {
-        err = BN_generate_prime_ex2(p, BITS, 1, NULL, NULL, NULL, ctx);
+        err = BN_generate_prime_ex(p, BITS, 1, NULL, NULL, NULL);
         if (err != 1)
         {
             printf(" * Gereation of a P prime failed! (gen_pqg_params, support_functions)\n");
             goto end;
         }
-        err = BN_generate_prime_ex2(q, BITS, 1, NULL, NULL, NULL, ctx);
+        err = BN_generate_prime_ex(q, BITS, 1, NULL, NULL, NULL);
         if (err != 1)
         {
             printf(" * Gereation of a Q prime failed! (gen_pqg_params, support_functions)\n");
@@ -87,8 +92,7 @@ unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *lambda, struct paillie
         goto end;
     }
 
-    i = 0;
-    for (i; i < MAXITER; i++)
+    for (i = 0; i < MAXITER; i++)
     {
         err = rand_range(tmp_g, pk->n_sq);
         if (err != 1)
@@ -113,7 +117,7 @@ unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *lambda, struct paillie
             printf(" * Computation of U failed! (gen_pqg_params, support_functions)\n");
             goto end;
         }
-        err = L(tmp_u, pk->n, tmp_u, ctx);
+        err = L(tmp_u, pk->n, tmp_u);
         if (err != 1)
         {
             printf(" * Computation of L(U) failed! (gen_pqg_params, support_functions)\n");
@@ -210,7 +214,7 @@ unsigned int count_mi(BIGNUM *mi, BIGNUM *g, BIGNUM *lambda, BIGNUM *n_sq, BIGNU
         goto end;
     }
 
-    err = L(u, n, u, ctx);
+    err = L(u, n, u);
     if (err != 1)
     {
         printf(" * Computation of L(U) failed! (count_mi, support_functions)\n");
@@ -233,9 +237,10 @@ end:
     return err;
 }
 
-unsigned int L(BIGNUM *u, BIGNUM *n, BIGNUM *res, BN_CTX *ctx)
+unsigned int L(BIGNUM *u, BIGNUM *n, BIGNUM *res)
 {
     unsigned int err = 0;
+    BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
         return 0;
 
@@ -257,6 +262,7 @@ unsigned int L(BIGNUM *u, BIGNUM *n, BIGNUM *res, BN_CTX *ctx)
 
 end:
     BN_free(rem);
+    BN_CTX_free(ctx);
 
     return err;
 }

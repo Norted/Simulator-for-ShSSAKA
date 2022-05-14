@@ -2,13 +2,13 @@
 #define __OPENSSL_BN_H__
 
 #include <schnorrs_signature.h>
-#include <SSAKA.h>
+#include <ShSSAKA.h>
 #include <globals.h>
 
 unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *lambda, struct paillier_PublicKey *pk);
 unsigned int lcm(BIGNUM *a, BIGNUM *b, BIGNUM *res);
 unsigned int count_mi(BIGNUM *mi, BIGNUM *g, BIGNUM *lambda, BIGNUM *n_sq, BIGNUM *n);
-unsigned int L(BIGNUM *u, BIGNUM *n, BIGNUM *res, BN_CTX *ctx);
+unsigned int L(BIGNUM *u, BIGNUM *n, BIGNUM *res);
 unsigned int lambda_computation(BIGNUM *p, BIGNUM *q, BIGNUM *lambda);
 unsigned int generate_rnd_paillier(BIGNUM *bn_range, BIGNUM *gcd_chck, BIGNUM *random);
 unsigned int ec_hash(const EC_GROUP *group, BIGNUM *res, BIGNUM *Y, EC_POINT *t_s, EC_POINT *kappa);

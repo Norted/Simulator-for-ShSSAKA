@@ -10,7 +10,7 @@
 #include <support_functions.h>
 #include <paishamir.h>
 #include <AKA.h>
-#include <SSAKA.h>
+#include <ShSSAKA.h>
 
 // Keychains
 struct aka_Keychain g_serverKeys;
