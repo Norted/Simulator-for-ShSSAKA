@@ -37,8 +37,8 @@ unsigned int ssaka_setup()
         } */
     }
 
-    printf("---SERVER---\n");
-    aka_keyPrinter(&g_serverKeys);
+    // printf("---SERVER---\n");
+    // aka_keyPrinter(&g_serverKeys);
     /* if (!g_serverKeys.ID)
     {
         printf(" * Initialization of the SSAKA Keys failed! (SSAKA, ssaka_setup)\n");
@@ -74,14 +74,14 @@ unsigned int ssaka_setup()
         goto end;
     } */
 
-    printf("--- CLIENT ---\n");
+   /*  printf("--- CLIENT ---\n");
     ssaka_keyPrinter(&g_ssaka_devicesKeys[0]);
 
     for (i = 1; i < currentNumberOfDevices; i++)
     {
         printf("--- DEVICE %d ---\n", i);
         ssaka_keyPrinter(&g_ssaka_devicesKeys[i]);
-    }
+    } */
 
 end:
     /* if (fail == 1)
@@ -278,7 +278,7 @@ unsigned int ssaka_akaServerSignVerify(unsigned int *list_of_used_devs, unsigned
     BN_dec2bn(&server->tau_s, ver);
 
     if (EC_POINT_cmp(g_globals.keychain->ec_group, server->kappa, client.kappa, ctx) == 0)
-        printf("\n~ GOOD! :)\n\n");
+        printf("\t~ GOOD! :)\n");
     else
         err = 0;
 
