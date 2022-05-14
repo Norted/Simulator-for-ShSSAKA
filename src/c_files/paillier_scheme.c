@@ -104,7 +104,7 @@ unsigned int paillier_decrypt(struct paillier_Keychain *keychain, BIGNUM *cipher
         printf(" * Cipher mod_exp operation failed! (decrypt, paillier_scheme)\n");
         goto end;
     }
-    err = L(u, keychain->pk->n, u, ctx);
+    err = L(u, keychain->pk->n, u);
     if(err != 1)
     {
         printf(" * L function failed! (decrypt, paillier_scheme)\n");
