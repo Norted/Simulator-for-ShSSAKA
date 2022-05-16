@@ -106,7 +106,7 @@ if [ $FOUND = 0 ]; then
 fi
 
 cd ${SCRIPT_DIR}
-make
+make all >/dev/null 2>&1
 
 echo ""
 echo "- - - - - - - - - - - - - - - - - - -"
