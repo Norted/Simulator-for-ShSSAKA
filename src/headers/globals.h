@@ -4,7 +4,7 @@
 // ======== MACROS ======================================================================
 #define NUM_THREADS 2
 #define G_NUMOFDEVICES 10
-#define G_POLYDEGREE 3
+#define G_POLYDEGREE 2
 #define BUFFER 512 // 512, 1024
 #define BITS 512   // 512, 1024, 1500, 2048
 #define MAXITER 10000
