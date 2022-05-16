@@ -19,13 +19,13 @@ unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *lambda, struct paillie
 
     for (i; i < MAXITER; i++)
     {
-        err = BN_generate_prime_ex2(p, BITS, 1, NULL, NULL, NULL, ctx);
+        err = BN_generate_prime_ex(p, BITS, 1, NULL, NULL, NULL);
         if (err != 1)
         {
             printf(" * Gereation of a P prime failed! (gen_pqg_params, support_functions)\n");
             goto end;
         }
-        err = BN_generate_prime_ex2(q, BITS, 1, NULL, NULL, NULL, ctx);
+        err = BN_generate_prime_ex(q, BITS, 1, NULL, NULL, NULL);
         if (err != 1)
         {
             printf(" * Gereation of a Q prime failed! (gen_pqg_params, support_functions)\n");
