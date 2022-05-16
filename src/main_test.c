@@ -59,20 +59,17 @@ int main(void)
     {
         printf(" * Failed to generate EC group!\n");
         return_code = 0;
-        // goto final;
     }
     if (g_globals.keychain == NULL)
     {
         printf(" * KEYCHAIN ALOCATION FAILED!\n");
         return_code = 0;
-        // goto final;
     }
     err = gen_schnorr_keychain(group, g_globals.keychain);
     if (err != 1)
     {
         printf(" * Failed to generate Schnorr params!\n");
         return_code = 0;
-        // goto final;
     }
 
     /*  AKA-SETUP and AKA-CLIENT-REGISTER
@@ -662,8 +659,6 @@ end:
         cJSON_free(json_noise);
         cJSON_free(json_message);
     //*/
-
-final:
 
     EC_GROUP_free(group);
     BN_free(message);

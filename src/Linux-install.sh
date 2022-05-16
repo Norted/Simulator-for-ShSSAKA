@@ -4,11 +4,12 @@ if [ `id -u` != 0 ]; then
     exit -1
 fi
 
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 echo "=== CHECKING APPLiCATION DEPENDENCIES ==="
 echo "- - - - - - - - - - - - - - - - - - -"
 echo "Checking GTK..."
 if command -v gtk-launch --version >/dev/null 2>&1 ; then
-    echo "OK! $(gtk-launch --version)"
+    echo "OK! Version: $(gtk-launch --version)"
 else
     echo "GTK not found, installing..."
     sudo apt-get install -y libgtk-3-dev
@@ -33,6 +34,21 @@ else
         exit -1
     else
         echo "Installation of OpenSSL complete!"
+    fi
+fi
+echo "- - - - - - - - - - - - - - - - - - -"
+echo "Checking cmake..."
+if command -v cmake --version >/dev/null 2>&1 ; then
+    echo "OK! $(cmake --version)"
+else
+    echo "cmake not found, installing..."
+    sudo apt-get install -y cmake
+    if [ $? != 0 ]; then
+        echo "!!!!! Command exited with $? code !!!!!"
+        echo "Can't move on. Exiting process, because cmake installation went wrong ... Consider manual build. Bye!"
+        exit -1
+    else
+        echo "Installation of cmake complete!"
     fi
 fi
 echo "- - - - - - - - - - - - - - - - - - -"
@@ -74,7 +90,7 @@ if [ $FOUND = 0 ]; then
             echo "Can't move on. Exiting process, because cJSON 'cmake' went wrong ... Consider manual build. Bye!"
             exit -1
         fi
-        make
+        make ..
         if [ $? != 0 ]; then
             echo "!!!!! Command exited with $? code !!!!!"
             echo "Can't move on. Exiting process, because cJSON 'make' went wrong ... Consider manual build. Bye!"
@@ -88,6 +104,10 @@ if [ $FOUND = 0 ]; then
         fi
     fi
 fi
+
+cd ${SCRIPT_DIR}
+make
+
 echo ""
 echo "- - - - - - - - - - - - - - - - - - -"
 echo "=== ALL CLEAR - ENJOY! BYE! ==="
