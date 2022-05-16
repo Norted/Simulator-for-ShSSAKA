@@ -67,7 +67,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
         {
             sprintf(str_i, "%d", j);
             BN_dec2bn(&str_bn, str_i);
-            err = BN_mod_exp(xs[j], g_ssaka_devicesKeys[i].pk, str_bn, paikeys->pk->n, ctx); // TEST mod!!!
+            err = BN_mod_exp(xs[j], g_ssaka_devicesKeys[i].pk, str_bn, order, ctx); // TEST mod!!!
             /* if (err != 1)
             {
                 printf(" * Computation of XS %d failed! (paiShamir_get_ci, paishamir)\n", j);

@@ -3,8 +3,8 @@
 
 // ======== MACROS ======================================================================
 #define NUM_THREADS 2
-#define G_NUMOFDEVICES 10
-#define G_POLYDEGREE 2
+#define G_NUMOFDEVICES 15
+#define G_POLYDEGREE 10
 #define BUFFER 512 // 512, 1024
 #define BITS 512   // 512, 1024, 1500, 2048
 #define MAXITER 10000
@@ -125,5 +125,8 @@ extern const char *restrict file_precomputed_noise;
 extern const char *restrict file_precomputed_message;
 cJSON *json_noise;
 cJSON *json_message;
+
+clock_t g_start, g_finish;
+double g_auth_consumed_time, g_ver_consumed_time;
 
 #endif

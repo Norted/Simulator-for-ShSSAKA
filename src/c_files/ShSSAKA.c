@@ -225,6 +225,8 @@ end:
 unsigned int ssaka_akaServerSignVerify(unsigned int *list_of_used_devs, unsigned int size, BIGNUM *Y, struct ServerSign *server)
 {
     unsigned int err = 0;
+    
+    g_start = clock();
 
     if (BN_is_zero(Y) == 1 || !g_serverKeys.keys->keys || BN_is_zero(g_ssaka_devicesKeys[0].pk) == 1)
     {
@@ -281,6 +283,9 @@ unsigned int ssaka_akaServerSignVerify(unsigned int *list_of_used_devs, unsigned
         printf("\t~ GOOD! :)\n");
     else
         err = 0;
+    
+    g_finish = clock();
+    g_ver_consumed_time = difftime(g_finish, g_start);
 
 end:
     free_clientproof(&client);
@@ -333,6 +338,11 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
         printf(" * TAU_C is zero! (ssaka_clientProofVerify, SSAKA)\n");
         return 0;
     }
+
+    g_finish = clock();
+    g_auth_consumed_time = difftime(g_finish, g_start);
+
+    g_start = clock();
 
     err = EC_GROUP_get_order(g_globals.keychain->ec_group, order, ctx);
     /* if (err != 1)

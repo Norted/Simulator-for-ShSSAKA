@@ -24,7 +24,7 @@ EC_POINT *pk_c;
 // Globals
 BIGNUM *g_range;
 struct globals g_globals;
-unsigned int currentNumberOfDevices = 4;
+unsigned int currentNumberOfDevices = G_NUMOFDEVICES;
 
 // Threding and pre-computation globals
 unsigned int paillier_inited = 0;
@@ -37,8 +37,8 @@ const char *restrict file_precomputed_noise = "precomputed_values/precomputation
 const char *restrict file_precomputed_message = "precomputed_values/precomputation_message.json";
 
 // Benchmarking
-clock_t start, finish;
-double consumed_time, average_time;
+clock_t start, finish, dev_start, dev_finish, s_start, s_finish;
+double consumed_time, dev_consumed_time, s_consumed_time;
 
 int main(void)
 {
@@ -59,25 +59,72 @@ int main(void)
     EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
     err = gen_schnorr_keychain(group, g_globals.keychain);
    
+    
+    
     printf("\n--- BENCHMARKING ---\n");
-    unsigned int list_of_all_devs[currentNumberOfDevices - 1];
+
+    FILE *file = fopen("../benchmarks/poly_10.csv", "w");
+    if (file == NULL)
+    {
+        printf("\t * File open failed!\n");
+        return 0;
+    }
+
+    /* unsigned int list_of_all_devs[currentNumberOfDevices - 1];
     for (int i = 1; i < currentNumberOfDevices; i++)
     {
         list_of_all_devs[i - 1] = i;
     }
-    unsigned int size_all = sizeof(list_of_all_devs) / sizeof(unsigned int);
+    unsigned int size_all = sizeof(list_of_all_devs) / sizeof(unsigned int); */
 
     int upper = currentNumberOfDevices-1;
-    int lower_devs = 0;
+    int lower_devs = 1;
+    int iter = 10;
 
     struct ServerSign server;
     
-    start = clock();
-        err = ssaka_setup();
-    finish = clock();
-    consumed_time = difftime(finish, start);
+    fprintf(file, "SETUP\nNUM_THREADS;%d\nG_NUMOFDEVICES;%d\nG_POLYDEGREE;%d\nBUFFER;%d\nBITS;%d\nMAXITER;%d\nRANGE;%d\n\nSSAKA_SETUP\nITER;DEV_GEN;SERV_GEN;TIME;ERR\n",
+            NUM_THREADS, G_NUMOFDEVICES, G_POLYDEGREE, BUFFER, BITS, MAXITER, RANGE);
     
-    for (int i = 0; i < 100; i++)
+    for(int i = 0; i < iter; i++)
+    {
+        printf("Round %d\t", i);
+        start = clock();
+            if(paillier_inited == 0)
+            {
+                init_paillier_keychain(&g_paiKeys);
+                err = paillier_generate_keypair(&g_paiKeys);
+            }
+            pk_c = EC_POINT_new(g_globals.keychain->ec_group);
+
+            dev_start = clock();
+                int i = 0;
+                for (i; i < currentNumberOfDevices; i++)
+                {
+                    g_ssaka_devicesKeys[i].pk = BN_new();
+                    g_ssaka_devicesKeys[i].sk = BN_new();
+                    g_ssaka_devicesKeys[i].kappa = BN_new();
+
+                    err = ssaka_KeyGeneration(&g_ssaka_devicesKeys[i]);
+                }
+                err = paiShamir_distribution(&g_paiKeys);
+            dev_finish = clock();
+            dev_consumed_time = difftime(dev_finish, dev_start);
+
+            s_start = clock();
+                err = _get_pk_c();
+                init_aka_mem(&g_serverKeys);
+            s_finish = clock();
+            s_consumed_time = difftime(s_finish, s_start);
+        finish = clock();
+        consumed_time = difftime(finish, start);
+        fprintf(file, "%d;%f;%f;%f;%d\n", i, (dev_consumed_time/CLOCKS_PER_SEC), (s_consumed_time/CLOCKS_PER_SEC), (consumed_time/CLOCKS_PER_SEC), err);
+        printf("Finished! ~ %d\n", err);
+    }
+
+    fprintf(file, "\nSSAKA_VERIFY\nITER;N#DEV;AUTH_TIME;VER_TIME;ERR\n");
+    
+    for (int i = 0; i < iter; i++)
     {
         printf("Round %d\n", i);
         for (int z = G_POLYDEGREE; z < currentNumberOfDevices; z++)
@@ -95,13 +142,12 @@ int main(void)
             }
             printf("\t");
 
-            // pre_message = 1;
-            // pre_noise = 1;    
+            pre_message = 1;
+            pre_noise = 1;    
 
-            start = clock();
-                err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
-            finish = clock();
-            consumed_time = difftime(finish, start);
+            err = ssaka_akaServerSignVerify(list_of_used_devs, z, message, &server);
+
+            fprintf(file, "%d;%d;%f;%f;%d\n", i, z, (g_auth_consumed_time/CLOCKS_PER_SEC), (g_ver_consumed_time/CLOCKS_PER_SEC), err);
 
             free_serversign(&server);
         }
