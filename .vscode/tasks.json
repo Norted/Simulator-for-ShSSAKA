@@ -25,7 +25,7 @@
                 "-I/usr/local/lib",
                 "-I${workspaceFolder}/openssl",
                 "-I${workspaceFolder}/src/headers",
-                "${workspaceFolder}/src/c_files/SSAKA.c",
+                "${workspaceFolder}/src/c_files/ShSSAKA.c",
                 "${workspaceFolder}/src/c_files/AKA.c",
                 "${workspaceFolder}/src/c_files/schnorrs_signature.c",
                 "${workspaceFolder}/src/c_files/paishamir.c",

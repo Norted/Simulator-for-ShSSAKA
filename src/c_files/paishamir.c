@@ -67,7 +67,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
         {
             sprintf(str_i, "%d", j);
             BN_dec2bn(&str_bn, str_i);
-            err = BN_mod_exp(xs[j], g_ssaka_devicesKeys[i].pk, str_bn, paikeys->pk->n, ctx); // TEST mod!!!
+            err = BN_mod_exp(xs[j], g_ssaka_devicesKeys[i].pk, str_bn, order, ctx);
             if (err != 1)
             {
                 printf(" * Computation of XS %d failed! (paiShamir_get_ci, paishamir)\n", j);
@@ -75,7 +75,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
             }
         }
         
-        err = paiShamir_get_ci(paikeys, kappa_i[(i + 1) % (currentNumberOfDevices)], d[(i + 1) % (currentNumberOfDevices)], xs, paikeys->pk->n_sq, cN_prime); // TEST mod!!!
+        err = paiShamir_get_ci(paikeys, kappa_i[(i + 1) % (currentNumberOfDevices)], d[(i + 1) % (currentNumberOfDevices)], xs, paikeys->pk->n_sq, cN_prime);
         if (err != 1)
         {
             printf(" * Get first CN' (%d) failed! (paiShamir_distribution, paishamir)\n", (i + 1) % (currentNumberOfDevices));
@@ -86,7 +86,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
         {
             if (j == i || j == (i + 1) % (currentNumberOfDevices))
                 continue;
-            err = paiShamir_get_ci(paikeys, kappa_i[j], d[j], xs, paikeys->pk->n_sq, ci); // TEST mod!!!
+            err = paiShamir_get_ci(paikeys, kappa_i[j], d[j], xs, paikeys->pk->n_sq, ci);
             if (err != 1)
             {
                 printf(" * Get C_%d failed! (paiShamir_distribution, paishamir)\n", j);
@@ -99,13 +99,13 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
                 goto end;
             }
         }
-        err = paiShamir_get_c(kappa_i[i], paikeys->pk->n, xs, d[i], c); // TEST mod!!!
+        err = paiShamir_get_c(kappa_i[i], paikeys->pk->n, xs, d[i], c); 
         if(err != 1)
         {
             printf(" * Compute C %d failed!", i);
             goto end;
         }
-        err = paiShamir_get_share(paikeys, cN_prime, c, order, g_ssaka_devicesKeys[i].sk); // TEST mod!!! // paikeys->pk->n_sq
+        err = paiShamir_get_share(paikeys, cN_prime, c, order, g_ssaka_devicesKeys[i].sk);
         if (err != 1)
         {
             printf(" * Get SHARE (%d) failed! (paiShamir_distribution, paishamir)\n", i);
@@ -192,7 +192,7 @@ unsigned int paiShamir_get_ci(struct paillier_Keychain *paikeys, BIGNUM *kappa_i
     for (i = 1; i <= G_POLYDEGREE; i++)
     {
         BN_copy(polynom[i], d[i - 1]);
-        err = BN_mod_mul(polynom[i], polynom[i], xs[i-1], paikeys->pk->n_sq, ctx); // TEST mod!!! // pk->n
+        err = BN_mod_mul(polynom[i], polynom[i], xs[i-1], paikeys->pk->n_sq, ctx);
         if (err != 1)
         {
             printf(" * Multiplication of POLYNOM %d with XS %d failed! (paiShamir_get_ci, paishamir)\n", i, i);
