@@ -23,7 +23,7 @@ EC_POINT *pk_c;
 // Globals
 BIGNUM *g_range;
 struct globals g_globals;
-unsigned int currentNumberOfDevices = 4;
+unsigned int currentNumberOfDevices = 5;
 
 // Threding and pre-computation globals
 unsigned int paillier_inited = 0;
@@ -121,7 +121,7 @@ int main(void)
     }
     unsigned int size_all = sizeof(list_of_all_devs) / sizeof(unsigned int);
 
-    unsigned int list_of_used_devs[] = {1, 2};
+    unsigned int list_of_used_devs[] = {1, 2, 3};
     unsigned int size_used = sizeof(list_of_used_devs) / sizeof(unsigned int);
 
     struct ServerSign server;

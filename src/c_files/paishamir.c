@@ -99,7 +99,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
                 goto end;
             }
         }
-        err = paiShamir_get_c(kappa_i[i], paikeys->pk->n, xs, d[i], c); 
+        err = paiShamir_get_c(kappa_i[i], paikeys->pk->n, xs, d[i], c);
         if(err != 1)
         {
             printf(" * Compute C %d failed!", i);
