@@ -22,7 +22,7 @@
 #include <openssl/sha.h>
 #include <openssl/ec.h>
 #include <openssl/obj_mac.h>
-#include <cjson/cJSON.h>
+#include <cJSON.h>
 
 // ======== STRUCTS =====================================================================
 // PAILLIER STRUCTS

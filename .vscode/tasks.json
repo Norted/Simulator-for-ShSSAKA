@@ -25,6 +25,7 @@
                 "-I/usr/local/lib",
                 "-I${workspaceFolder}/openssl",
                 "-I${workspaceFolder}/src/headers",
+                "${workspaceFolder}/src/c_files/cJSON.c",
                 "${workspaceFolder}/src/c_files/ShSSAKA.c",
                 "${workspaceFolder}/src/c_files/AKA.c",
                 "${workspaceFolder}/src/c_files/schnorrs_signature.c",
@@ -51,7 +52,7 @@
                 "-lgthread-2.0",
                 "-lrt",
                 "-lglib-2.0",
-                "-lcjson",
+                //"-lcjson",
                 "-lm",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"
