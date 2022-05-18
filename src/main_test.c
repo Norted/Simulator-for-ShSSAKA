@@ -83,7 +83,7 @@ int main(void)
 
     struct ServerSign server;
     
-    fprintf(file, "SETUP\nNUM_THREADS;%d\nG_NUMOFDEVICES;%d\nG_POLYDEGREE;%d\nBUFFER;%d\nBITS;%d\nMAXITER;%d\nRANGE;%d\n\nSSAKA_SETUP\nITER;DEV_GEN;SERV_GEN;TIME;ERR\n",
+    fprintf(file, "SETUP\nNUM_THREADS;%d\nG_NUMOFDEVICES;%d\nG_POLYDEGREE;%d\nBUFFER;%d\nBITS;%d\nMAXITER;%d\nRANGE;%d\n\nShSSAKA_SETUP\nITER;DEV_GEN;SERV_GEN;TIME;ERR\n",
             NUM_THREADS, G_NUMOFDEVICES, G_POLYDEGREE, BUFFER, BITS, MAXITER, RANGE);
     
     for(int i = 0; i < iter; i++)
@@ -122,7 +122,7 @@ int main(void)
         printf("Finished! ~ %d\n", err);
     }
 
-    fprintf(file, "\nSSAKA_VERIFY\nITER;N#DEV;AUTH_TIME;VER_TIME;ERR\n");
+    fprintf(file, "\nShSSAKA_VERIFY\nITER;N#DEV;AUTH_TIME;VER_TIME;ERR\n");
     
     for (int i = 0; i < iter; i++)
     {
