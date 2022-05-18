@@ -1,6 +1,6 @@
 #include <ShSSAKA.h>
 
-struct ssaka_Keychain g_ssaka_devicesKeys[G_NUMOFDEVICES];
+struct shssaka_Keychain g_shssaka_devicesKeys[G_NUMOFDEVICES];
 struct paillier_Keychain g_paiKeys;
 EC_POINT *pk_c;
 
@@ -20,18 +20,18 @@ unsigned int _get_pk_c();
     }
 */
 
-unsigned int ssaka_setup()
+unsigned int shssaka_setup()
 {
     unsigned int err = 0;
     unsigned int fail = 0;
-    init_ssaka_mem();
+    init_shssaka_mem();
 
     if(paillier_inited == 0)
     {
         err = paillier_generate_keypair(&g_paiKeys);
         if (err != 1)
         {
-            printf(" * Failed to generate Paillier Keychain! (SSAKA, ssaka_setup)\n");
+            printf(" * Failed to generate Paillier Keychain! (SSAKA, shssaka_setup)\n");
             fail = 1;
             goto end;
         }
@@ -41,7 +41,7 @@ unsigned int ssaka_setup()
     aka_keyPrinter(&g_serverKeys);
     if (!g_serverKeys.ID)
     {
-        printf(" * Initialization of the SSAKA Keys failed! (SSAKA, ssaka_setup)\n");
+        printf(" * Initialization of the SSAKA Keys failed! (SSAKA, shssaka_setup)\n");
         fail = 1;
         goto end;
     }
@@ -50,10 +50,10 @@ unsigned int ssaka_setup()
     // pre-init of SSAKA keys for client and other devices
     for (i; i < currentNumberOfDevices; i++)
     {
-        err = ssaka_KeyGeneration(&g_ssaka_devicesKeys[i]);
+        err = shssaka_KeyGeneration(&g_shssaka_devicesKeys[i]);
         if (err != 1)
         {
-            printf(" * Key generation failed (device %d)! (SSAKA, ssaka_setup)\n", i);
+            printf(" * Key generation failed (device %d)! (SSAKA, shssaka_setup)\n", i);
             fail = 1;
             goto end;
         }
@@ -62,44 +62,44 @@ unsigned int ssaka_setup()
     err = paiShamir_distribution(&g_paiKeys);
     if (err != 1)
     {
-        printf(" * Distribution of the secret failed! (SSAKA, ssaka_setup)\n");
+        printf(" * Distribution of the secret failed! (SSAKA, shssaka_setup)\n");
         fail = 1;
         goto end;
     }
     err = _get_pk_c();
     if (err != 1)
     {
-        printf(" * Computation of the common PK failed! (SSAKA, ssaka_setup)\n");
+        printf(" * Computation of the common PK failed! (SSAKA, shssaka_setup)\n");
         fail = 1;
         goto end;
     }
 
     printf("--- CLIENT ---\n");
-    ssaka_keyPrinter(&g_ssaka_devicesKeys[0]);
+    shssaka_keyPrinter(&g_shssaka_devicesKeys[0]);
 
     for (i = 1; i < currentNumberOfDevices; i++)
     {
         printf("--- DEVICE %d ---\n", i);
-        ssaka_keyPrinter(&g_ssaka_devicesKeys[i]);
+        shssaka_keyPrinter(&g_shssaka_devicesKeys[i]);
     }
 
 end:
     if (fail == 1)
     {
-        free_ssaka_mem();
+        free_shssaka_mem();
     }
 
     return err;
 }
 
-unsigned int ssaka_KeyGeneration(struct ssaka_Keychain *keys)
+unsigned int shssaka_KeyGeneration(struct shssaka_Keychain *keys)
 {
     unsigned int err = 0;
     
     err = rand_range(keys->pk, EC_GROUP_get0_order(g_globals.keychain->ec_group));
     if(err != 1)
     {
-        printf(" * Generation of random PK failed! (ssaka_KeyGeneration, SSAKA)\n");
+        printf(" * Generation of random PK failed! (shssaka_KeyGeneration, SSAKA)\n");
         return err;
     }
     keys->ID = g_globals.idCounter++;
@@ -107,7 +107,7 @@ unsigned int ssaka_KeyGeneration(struct ssaka_Keychain *keys)
     return err;
 }
 
-unsigned int ssaka_ClientAddShare(unsigned int num_of_new_devices)
+unsigned int shssaka_ClientAddShare(unsigned int num_of_new_devices)
 {
     unsigned int err = 0;
     if (currentNumberOfDevices + num_of_new_devices > G_NUMOFDEVICES)
@@ -118,14 +118,14 @@ unsigned int ssaka_ClientAddShare(unsigned int num_of_new_devices)
 
     for (int i = 0; i < num_of_new_devices; i++)
     {
-        g_ssaka_devicesKeys[currentNumberOfDevices + i].pk = BN_new();
-        g_ssaka_devicesKeys[currentNumberOfDevices + i].sk = BN_new();
-        g_ssaka_devicesKeys[currentNumberOfDevices + i].kappa = BN_new();
+        g_shssaka_devicesKeys[currentNumberOfDevices + i].pk = BN_new();
+        g_shssaka_devicesKeys[currentNumberOfDevices + i].sk = BN_new();
+        g_shssaka_devicesKeys[currentNumberOfDevices + i].kappa = BN_new();
 
-        err = ssaka_KeyGeneration(&g_ssaka_devicesKeys[currentNumberOfDevices + i]);
+        err = shssaka_KeyGeneration(&g_shssaka_devicesKeys[currentNumberOfDevices + i]);
         if (err != 1)
         {
-            printf(" * Key generation of device %d failed! (ssaka_ClientAddShare, SSAKA)\n", i);
+            printf(" * Key generation of device %d failed! (shssaka_ClientAddShare, SSAKA)\n", i);
             goto end;
         }
     }
@@ -134,13 +134,13 @@ unsigned int ssaka_ClientAddShare(unsigned int num_of_new_devices)
     err = paiShamir_distribution(&g_paiKeys);
     if (err != 1)
     {
-        printf(" * Distribution of the secret failed! (ssaka_ClientAddShare, SSAKA)\n");
+        printf(" * Distribution of the secret failed! (shssaka_ClientAddShare, SSAKA)\n");
         goto end;
     }
     err = _get_pk_c();
     if (err != 1)
     {
-        printf(" * Re-computation of the common PK failed! (ssaka_ClientAddShare, SSAKA)\n");
+        printf(" * Re-computation of the common PK failed! (shssaka_ClientAddShare, SSAKA)\n");
         goto end;
     }
 
@@ -148,7 +148,7 @@ end:
     return err;
 }
 
-unsigned int ssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int rev_size)
+unsigned int shssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int rev_size)
 {
     int i = 0;
     unsigned int err = 0;
@@ -170,15 +170,15 @@ unsigned int ssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int 
             printf("Cannot remove client (0)!\n");
             return 3;
         }
-        g_ssaka_devicesKeys[rev_devices_list[i]].ID = 0;        
-        g_ssaka_devicesKeys[rev_devices_list[i]].pk = BN_new();
-        g_ssaka_devicesKeys[rev_devices_list[i]].sk = BN_new();
-        g_ssaka_devicesKeys[rev_devices_list[i]].kappa = BN_new();
+        g_shssaka_devicesKeys[rev_devices_list[i]].ID = 0;        
+        g_shssaka_devicesKeys[rev_devices_list[i]].pk = BN_new();
+        g_shssaka_devicesKeys[rev_devices_list[i]].sk = BN_new();
+        g_shssaka_devicesKeys[rev_devices_list[i]].kappa = BN_new();
     }
 
     for (i = 0; i < currentNumberOfDevices; i++)
     {
-        if (g_ssaka_devicesKeys[i].ID != 0)
+        if (g_shssaka_devicesKeys[i].ID != 0)
         {
             index_list[counter++] = i;
         }
@@ -188,18 +188,18 @@ unsigned int ssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int 
     {
         if (i < index_size)
         {
-            g_ssaka_devicesKeys[i].ID = g_ssaka_devicesKeys[index_list[i]].ID;
-            BN_copy(g_ssaka_devicesKeys[i].pk, g_ssaka_devicesKeys[index_list[i]].pk);
-            BN_copy(g_ssaka_devicesKeys[i].sk, g_ssaka_devicesKeys[index_list[i]].sk);
-            if (g_ssaka_devicesKeys[index_list[i]].kappa)
-                BN_copy(g_ssaka_devicesKeys[i].kappa, g_ssaka_devicesKeys[index_list[i]].kappa);
+            g_shssaka_devicesKeys[i].ID = g_shssaka_devicesKeys[index_list[i]].ID;
+            BN_copy(g_shssaka_devicesKeys[i].pk, g_shssaka_devicesKeys[index_list[i]].pk);
+            BN_copy(g_shssaka_devicesKeys[i].sk, g_shssaka_devicesKeys[index_list[i]].sk);
+            if (g_shssaka_devicesKeys[index_list[i]].kappa)
+                BN_copy(g_shssaka_devicesKeys[i].kappa, g_shssaka_devicesKeys[index_list[i]].kappa);
         }
         else
         {
-            g_ssaka_devicesKeys[i].ID = 0;
-            BN_free(g_ssaka_devicesKeys[i].pk);
-            BN_free(g_ssaka_devicesKeys[i].sk);
-            BN_free(g_ssaka_devicesKeys[i].kappa);
+            g_shssaka_devicesKeys[i].ID = 0;
+            BN_free(g_shssaka_devicesKeys[i].pk);
+            BN_free(g_shssaka_devicesKeys[i].sk);
+            BN_free(g_shssaka_devicesKeys[i].kappa);
         }
     }
 
@@ -207,13 +207,13 @@ unsigned int ssaka_ClientRevShare(unsigned int rev_devices_list[], unsigned int 
     err = paiShamir_distribution(&g_paiKeys);
     if (err != 1)
     {
-        printf(" * Secret distribution failed! (ssaka_ClientRevShare, SSAKA)\n");
+        printf(" * Secret distribution failed! (shssaka_ClientRevShare, SSAKA)\n");
         goto end;
     }
     err = _get_pk_c();
     if (err != 1)
     {
-        printf(" * Client's PK computation failed! (ssaka_ClientRevShare, SSAKA)\n");
+        printf(" * Client's PK computation failed! (shssaka_ClientRevShare, SSAKA)\n");
         goto end;
     }
 
@@ -222,14 +222,14 @@ end:
     return err;
 }
 
-unsigned int ssaka_akaServerSignVerify(unsigned int *list_of_used_devs, unsigned int size, BIGNUM *Y, struct ServerSign *server)
+unsigned int shssaka_akaServerSignVerify(unsigned int *list_of_used_devs, unsigned int size, BIGNUM *Y, struct ServerSign *server)
 {
     unsigned int err = 0;
 
-    if (BN_is_zero(Y) == 1 || !g_serverKeys.keys->keys || BN_is_zero(g_ssaka_devicesKeys[0].pk) == 1)
+    if (BN_is_zero(Y) == 1 || !g_serverKeys.keys->keys || BN_is_zero(g_shssaka_devicesKeys[0].pk) == 1)
     {
         BN_dec2bn(&server->tau_s, "0");
-        printf(" * Y, SERVER sk or CLIENT pk is 0! (ssaka_akaServerSignVerify, SSAKA)\n");
+        printf(" * Y, SERVER sk or CLIENT pk is 0! (shssaka_akaServerSignVerify, SSAKA)\n");
         goto end;
     }
 
@@ -250,7 +250,7 @@ unsigned int ssaka_akaServerSignVerify(unsigned int *list_of_used_devs, unsigned
     err = schnorr_sign(g_globals.keychain->ec_group, EC_KEY_get0_private_key(g_serverKeys.keys->keys), Y, EC_POINT_new(g_globals.keychain->ec_group), &signature);
     if (err != 1)
     {
-        printf(" * Schnorr signature failed! (ssaka_akaServerSignVerify, SSAKA)\n");
+        printf(" * Schnorr signature failed! (shssaka_akaServerSignVerify, SSAKA)\n");
         goto end;
     }
 
@@ -259,11 +259,11 @@ unsigned int ssaka_akaServerSignVerify(unsigned int *list_of_used_devs, unsigned
      *         (aka_clientProofVerify)
      *  Server  ←   (tau_c, kappa)  ←   Client
      */
-    err = ssaka_clientProofVerify(list_of_used_devs, size, Y, &signature, &client);
+    err = shssaka_clientProofVerify(list_of_used_devs, size, Y, &signature, &client);
     if (BN_is_zero(client.tau_c) == 1 || err != 1)
     {
         BN_dec2bn(&server->tau_s, "0");
-        printf(" * Client verification failed! (ssaka_akaServerSignVerify, SSAKA)\n");
+        printf(" * Client verification failed! (shssaka_akaServerSignVerify, SSAKA)\n");
         goto end;
     }
 
@@ -271,7 +271,7 @@ unsigned int ssaka_akaServerSignVerify(unsigned int *list_of_used_devs, unsigned
     err = rand_point(g_globals.keychain->ec_group, server->kappa);
     if(err != 1)
     {
-        printf(" * Failed to initialize server KAPPA! (ssaka_clientProofVerify, SSAKA)\n");
+        printf(" * Failed to initialize server KAPPA! (shssaka_clientProofVerify, SSAKA)\n");
         goto end;
     }
     sprintf(ver, "%d", schnorr_verify(g_globals.keychain->ec_group, pk_c, Y, server->kappa, client.signature));
@@ -290,7 +290,7 @@ end:
     return err;
 }
 
-unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned int size, BIGNUM *Y,
+unsigned int shssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned int size, BIGNUM *Y,
                                      struct schnorr_Signature *server_signature, struct ClientProof *client)
 {
     unsigned int err = 0;
@@ -321,7 +321,7 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
     {
-        printf(" * Generation of CTX failed! (ssaka_clientProofVerify, SSAKA)\n");
+        printf(" * Generation of CTX failed! (shssaka_clientProofVerify, SSAKA)\n");
         goto end;
     }
 
@@ -330,14 +330,14 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
 
     if (BN_is_zero(client->tau_c) == 1)
     {
-        printf(" * TAU_C is zero! (ssaka_clientProofVerify, SSAKA)\n");
+        printf(" * TAU_C is zero! (shssaka_clientProofVerify, SSAKA)\n");
         return 0;
     }
 
     err = EC_GROUP_get_order(g_globals.keychain->ec_group, order, ctx);
     if (err != 1)
     {
-        printf(" * Get ORDER failed! (ssaka_clientProofVerify, SSAKA)\n");
+        printf(" * Get ORDER failed! (shssaka_clientProofVerify, SSAKA)\n");
         goto end;
     }
 
@@ -354,19 +354,19 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
         err = rand_range(r_i[i], order);
         if (err != 1)
         {
-            printf(" * Generation of random R_I (%d) failed! (ssaka_clientProofVerify, SSAKA)\n", i);
+            printf(" * Generation of random R_I (%d) failed! (shssaka_clientProofVerify, SSAKA)\n", i);
             goto end;
         }
         err = EC_POINT_mul(g_globals.keychain->ec_group, t_i[i], r_i[i], NULL, NULL, ctx);
         if (err != 1)
         {
-            printf(" * Generation of random T_I (%d) failed! (ssaka_clientProofVerify, SSAKA)\n", i);
+            printf(" * Generation of random T_I (%d) failed! (shssaka_clientProofVerify, SSAKA)\n", i);
             goto end;
         }
         err = EC_POINT_mul(g_globals.keychain->ec_group, devices[i].kappa_i, NULL, server_signature->c_prime, r_i[i], ctx);
         if (err != 1)
         {
-            printf(" * Generation of random KAPPA_I (%d) failed! (ssaka_clientProofVerify, SSAKA)\n", i);
+            printf(" * Generation of random KAPPA_I (%d) failed! (shssaka_clientProofVerify, SSAKA)\n", i);
             goto end;
         }
     }
@@ -381,21 +381,21 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
     err = rand_range(client->signature->r, order);
     if (err != 1)
     {
-        printf(" * Generation of random signature R failed! (ssaka_clientProofVerify, SSAKA)\n");
+        printf(" * Generation of random signature R failed! (shssaka_clientProofVerify, SSAKA)\n");
         goto end;
     }
     
     err = EC_POINT_mul(g_globals.keychain->ec_group, t, client->signature->r, NULL, NULL, ctx);
     if (err != 1)
     {
-        printf(" * Computation of prime T failed! (ssaka_clientProofVerify, SSAKA)\n");
+        printf(" * Computation of prime T failed! (shssaka_clientProofVerify, SSAKA)\n");
         goto end;
     }
     
     err = EC_POINT_mul(g_globals.keychain->ec_group, client->kappa, NULL, server_signature->c_prime, client->signature->r, ctx);
     if (err != 1)
     {
-        printf(" * Computation of prime client's KAPPA failed! (ssaka_clientProofVerify, SSAKA)\n");
+        printf(" * Computation of prime client's KAPPA failed! (shssaka_clientProofVerify, SSAKA)\n");
         goto end;
     }
     for (i = 0; i < size; i++)
@@ -403,13 +403,13 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
         err = EC_POINT_add(g_globals.keychain->ec_group, t, t, t_i[i], ctx);
         if (err != 1)
         {
-            printf(" * Computation of partial T (%d) failed! (ssaka_clientProofVerify, SSAKA)\n", i);
+            printf(" * Computation of partial T (%d) failed! (shssaka_clientProofVerify, SSAKA)\n", i);
             goto end;
         }
         err = EC_POINT_add(g_globals.keychain->ec_group, client->kappa, client->kappa, devices[i].kappa_i, ctx);
         if (err != 1)
         {
-            printf(" * Computation of client's KAPPA (%d) failed! (ssaka_clientProofVerify, SSAKA)\n", i);
+            printf(" * Computation of client's KAPPA (%d) failed! (shssaka_clientProofVerify, SSAKA)\n", i);
             goto end;
         }
     }
@@ -417,7 +417,7 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
     err = ec_hash(g_globals.keychain->ec_group, client->signature->hash, Y, t, client->kappa); // e_c
     if (err != 1)
     {
-        printf(" * E_C Hash creation failed! (ssaka_clientProofVerify, SSAKA)\n");
+        printf(" * E_C Hash creation failed! (shssaka_clientProofVerify, SSAKA)\n");
         goto end;
     }
 
@@ -433,19 +433,19 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
         err = part_interpolation(interpolation_list, size + 1, i, order, sk_i);
         if (err != 1)
         {
-            printf(" * %d part interpolation failed! (ssaka_clientProofVerify, SSAKA)\n", i);
+            printf(" * %d part interpolation failed! (shssaka_clientProofVerify, SSAKA)\n", i);
             goto end;
         }
         err = BN_mod_mul(tmp_mul, client->signature->hash, sk_i, order, ctx);
         if (err != 1)
         {
-            printf(" * Computation of TMP_MUL (%d) failed! (ssaka_clientProofVerify, SSAKA)\n", i);
+            printf(" * Computation of TMP_MUL (%d) failed! (shssaka_clientProofVerify, SSAKA)\n", i);
             goto end;
         }
         err = BN_mod_sub(devices[i].s_i, r_i[i], tmp_mul, order, ctx);
         if (err != 1)
         {
-            printf(" * Computation of S_I (%d) failed! (ssaka_clientProofVerify, SSAKA)\n", i);
+            printf(" * Computation of S_I (%d) failed! (shssaka_clientProofVerify, SSAKA)\n", i);
             goto end;
         }
     }
@@ -460,19 +460,19 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
     err = part_interpolation(interpolation_list, size + 1, size, order, sk_0);
     if (err != 1)
     {
-        printf(" * Client's part interpolation failed! (ssaka_clientProofVerify, SSAKA)\n");
+        printf(" * Client's part interpolation failed! (shssaka_clientProofVerify, SSAKA)\n");
         goto end;
     }
     err = BN_mod_mul(tmp_mul, client->signature->hash, sk_0, order, ctx);
     if (err != 1)
     {
-        printf(" * Computation client's TMP_MUL failed! (ssaka_clientProofVerify, SSAKA)\n");
+        printf(" * Computation client's TMP_MUL failed! (shssaka_clientProofVerify, SSAKA)\n");
         goto end;
     }
     err = BN_mod_sub(client->signature->signature, client->signature->r, tmp_mul, order, ctx);
     if (err != 1)
     {
-        printf(" * Computation client's S_I failed! (ssaka_clientProofVerify, SSAKA)\n");
+        printf(" * Computation client's S_I failed! (shssaka_clientProofVerify, SSAKA)\n");
         goto end;
     }
 
@@ -481,7 +481,7 @@ unsigned int ssaka_clientProofVerify(unsigned int *list_of_used_devs, unsigned i
         err = BN_mod_add(client->signature->signature, client->signature->signature, devices[i].s_i, order, ctx);
         if (err != 1)
         {
-            printf(" * Addition of S_I %d failed! (ssaka_clientProofVerify, SSAKA)\n", i);
+            printf(" * Addition of S_I %d failed! (shssaka_clientProofVerify, SSAKA)\n", i);
             goto end;
         }
     }
@@ -504,7 +504,7 @@ end:
     return err;
 }
 
-void ssaka_keyPrinter(struct ssaka_Keychain *key)
+void shssaka_keyPrinter(struct shssaka_Keychain *key)
 {
     printf("ID: %d\n", key->ID);
     printf("PK: %s\n", BN_bn2dec(key->pk));
@@ -560,31 +560,31 @@ end:
     return err;
 }
 
-void init_ssaka_mem()
+void init_shssaka_mem()
 {
     init_aka_mem(&g_serverKeys);
     if(paillier_inited == 0)
         init_paillier_keychain(&g_paiKeys);
     for (int i = 0; i < currentNumberOfDevices; i++)
     {
-        g_ssaka_devicesKeys[i].pk = BN_new();
-        g_ssaka_devicesKeys[i].sk = BN_new();
-        g_ssaka_devicesKeys[i].kappa = BN_new();
+        g_shssaka_devicesKeys[i].pk = BN_new();
+        g_shssaka_devicesKeys[i].sk = BN_new();
+        g_shssaka_devicesKeys[i].kappa = BN_new();
     }
     pk_c = EC_POINT_new(g_globals.keychain->ec_group);
 
     return;
 }
 
-void free_ssaka_mem()
+void free_shssaka_mem()
 {
     free_aka_mem(&g_serverKeys);
     free_paillier_keychain(&g_paiKeys);
     for (int i = 0; i < currentNumberOfDevices; i++)
     {
-        BN_free(g_ssaka_devicesKeys[i].pk);
-        BN_free(g_ssaka_devicesKeys[i].sk);
-        BN_free(g_ssaka_devicesKeys[i].kappa);
+        BN_free(g_shssaka_devicesKeys[i].pk);
+        BN_free(g_shssaka_devicesKeys[i].sk);
+        BN_free(g_shssaka_devicesKeys[i].kappa);
     }
     EC_POINT_free(pk_c);
 

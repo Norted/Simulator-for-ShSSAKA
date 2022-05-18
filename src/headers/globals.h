@@ -90,7 +90,7 @@ struct aka_Keychain
 };
 
 // SSAKA STRUCT
-struct ssaka_Keychain
+struct shssaka_Keychain
 {
     unsigned int ID;
     BIGNUM *sk;
@@ -107,7 +107,7 @@ struct globals
 
 // ======== EXTERNS =====================================================================
 extern struct globals g_globals;
-extern struct ssaka_Keychain g_ssaka_devicesKeys[];
+extern struct shssaka_Keychain g_shssaka_devicesKeys[];
 extern struct aka_Keychain g_serverKeys;
 extern struct aka_Keychain g_aka_clientKeys;
 extern unsigned int currentNumberOfDevices;

@@ -18,9 +18,9 @@ static void activate(GtkApplication *app, gpointer *user_data);
 /*  BUTTON FUNCTIONS  */
 static void akaSetup(GtkWidget *button, GtkWidget *spinButton);
 static void akaServerSignVerify(GtkWidget *button, GtkWidget *label);
-static void ssakaClientProofVer(GtkWidget *button, GtkWidget *label);
-static void ssakaAddShare(GtkWidget *button, GtkWidget *label);
-static void ssakaRevShare(GtkWidget *button, GtkWidget *label);
+static void shssakaClientProofVer(GtkWidget *button, GtkWidget *label);
+static void shssakaAddShare(GtkWidget *button, GtkWidget *label);
+static void shssakaRevShare(GtkWidget *button, GtkWidget *label);
 static void openKeysDialogue(GtkWidget *button, gpointer *user_data);
 static void openParamDialogue(GtkWidget *button, gpointer *user_data);
 /*  OTHER FUNCTIONS */
@@ -38,7 +38,7 @@ void setCSS();
 // Keychains
 struct aka_Keychain g_serverKeys;
 struct aka_Keychain g_aka_clientKeys;
-struct ssaka_Keychain g_ssaka_devicesKeys[G_NUMOFDEVICES];
+struct shssaka_Keychain g_shssaka_devicesKeys[G_NUMOFDEVICES];
 
 struct paillier_Keychain g_paiKeys;
 EC_POINT *pk_c;
@@ -94,7 +94,7 @@ int main(int argc, char **argv)
 
   gtk_init(&argc, &argv);
   setCSS();
-  app = gtk_application_new("vut.ssaka.demo", GTK_WINDOW_TOPLEVEL);
+  app = gtk_application_new("vut.shssaka.demo", GTK_WINDOW_TOPLEVEL);
   g_signal_connect(app, "activate", G_CALLBACK(activate), NULL);
   status = g_application_run(G_APPLICATION(app), argc, argv);
   g_object_unref(app);
@@ -102,7 +102,7 @@ int main(int argc, char **argv)
   BN_free(Y);
   free_schnorr_keychain(g_globals.keychain);
   if (setup_toggled == 1)
-    free_ssaka_mem();
+    free_shssaka_mem();
 
   return status;
 }
@@ -139,14 +139,14 @@ static void activate(GtkApplication *app, gpointer *user_data)
   buttons.button_keys = gtk_button_new_with_label("Keys");
   buttons.button_params = gtk_button_new_with_label("Parameters");
   buttons.button_setup = gtk_button_new_with_label("Setup");
-  buttons.button_akaSeverSignVer = gtk_button_new_with_label("SSAKA Server Sign Verify");
-  buttons.button_addShare = gtk_button_new_with_label("SSAKA Add Share");
-  buttons.button_revShare = gtk_button_new_with_label("SSAKA Rev Share");
+  buttons.button_akaSeverSignVer = gtk_button_new_with_label("ShSSAKA Server Sign Verify");
+  buttons.button_addShare = gtk_button_new_with_label("ShSSAKA Add Share");
+  buttons.button_revShare = gtk_button_new_with_label("ShSSAKA Rev Share");
 
   setButtons(FALSE);
 
   /*  WINDOW Setup  */
-  gtk_window_set_title(GTK_WINDOW(window), "SSAKA Demonstartor");
+  gtk_window_set_title(GTK_WINDOW(window), "ShSSAKA Demonstartor");
   gtk_widget_set_name(window, "window");
   gtk_window_set_icon_from_file(window, "./icon.jpg", NULL);
   gtk_container_set_border_width(GTK_CONTAINER(window), 10);
@@ -227,12 +227,12 @@ static void activate(GtkApplication *app, gpointer *user_data)
   gtk_widget_set_sensitive(GTK_BUTTON(buttons.button_params), FALSE);
   gtk_box_pack_end(GTK_BOX(box_info), buttons.button_params, TRUE, TRUE, 2);
 
-  g_signal_connect(G_OBJECT(buttons.button_addShare), "clicked", G_CALLBACK(ssakaAddShare), GTK_LABEL(label_console));
+  g_signal_connect(G_OBJECT(buttons.button_addShare), "clicked", G_CALLBACK(shssakaAddShare), GTK_LABEL(label_console));
   gtk_widget_set_name(GTK_BUTTON(buttons.button_addShare), "button");
   gtk_widget_set_sensitive(GTK_BUTTON(buttons.button_addShare), FALSE);
   gtk_box_pack_end(GTK_BOX(box_keys), buttons.button_addShare, TRUE, TRUE, 2);
 
-  g_signal_connect(G_OBJECT(buttons.button_revShare), "clicked", G_CALLBACK(ssakaRevShare), GTK_LABEL(label_console));
+  g_signal_connect(G_OBJECT(buttons.button_revShare), "clicked", G_CALLBACK(shssakaRevShare), GTK_LABEL(label_console));
   gtk_widget_set_name(GTK_BUTTON(buttons.button_revShare), "button");
   gtk_widget_set_sensitive(GTK_BUTTON(buttons.button_revShare), FALSE);
   gtk_box_pack_end(GTK_BOX(box_keys), buttons.button_revShare, TRUE, TRUE, 2);
@@ -264,7 +264,7 @@ static void activate(GtkApplication *app, gpointer *user_data)
 /*  BUTTON FUNCTIONS  */
 static void akaSetup(GtkWidget *button, GtkWidget *label)
 {
-  unsigned int err = ssaka_setup();
+  unsigned int err = shssaka_setup();
   if (err != 1)
   {
     printf(" * SSAKA setup failed!\n");
@@ -291,7 +291,7 @@ static void akaServerSignVerify(GtkWidget *button, GtkWidget *label)
   }
 
   printf("Y: %s\n", BN_bn2dec(Y));
-  unsigned int err = ssaka_akaServerSignVerify(&used_devs, size_used, Y, &server);
+  unsigned int err = shssaka_akaServerSignVerify(&used_devs, size_used, Y, &server);
   if (err != 1 || BN_is_zero(server.tau_s) == 1)
   {
     // g_strconcat (gtk_label_get_text (console), g_strdup_printf (str));
@@ -304,9 +304,9 @@ static void akaServerSignVerify(GtkWidget *button, GtkWidget *label)
   updateLabel(GTK_LABEL(label), dmp);
 }
 
-static void ssakaAddShare(GtkWidget *button, GtkWidget *label)
+static void shssakaAddShare(GtkWidget *button, GtkWidget *label)
 {
-  uint err = ssaka_ClientAddShare(add_number);
+  uint err = shssaka_ClientAddShare(add_number);
   gchar *dmp;
   if (err == 1)
   {
@@ -323,9 +323,9 @@ static void ssakaAddShare(GtkWidget *button, GtkWidget *label)
   updateLabel(GTK_LABEL(label), dmp);
 }
 
-static void ssakaRevShare(GtkWidget *button, GtkWidget *label)
+static void shssakaRevShare(GtkWidget *button, GtkWidget *label)
 {
-  uint err = ssaka_ClientRevShare(revoke_devs, size_revoke);
+  uint err = shssaka_ClientRevShare(revoke_devs, size_revoke);
   gchar *dmp;
   if (err == 1)
   {
@@ -365,13 +365,13 @@ static void openKeysDialogue(GtkWidget *button, gpointer *user_data)
 
   gchar *message = g_strdup_printf(" --- Server --- \nID:\t%u\nPK:\t%s\nSK:\t%s\n\n --- Client --- \nID:\t%u\nPK:\t%s\nSK:\t%s\n\n==================\n\n",
                                    g_serverKeys.ID, EC_POINT_point2hex(g_globals.keychain->ec_group, EC_KEY_get0_public_key(g_serverKeys.keys->keys), POINT_CONVERSION_COMPRESSED, ctx),
-                                   BN_bn2hex(EC_KEY_get0_private_key(g_serverKeys.keys->keys)), g_ssaka_devicesKeys[0].ID, BN_bn2hex(g_ssaka_devicesKeys[0].pk),
-                                   BN_bn2hex(g_ssaka_devicesKeys[0].sk));
+                                   BN_bn2hex(EC_KEY_get0_private_key(g_serverKeys.keys->keys)), g_shssaka_devicesKeys[0].ID, BN_bn2hex(g_shssaka_devicesKeys[0].pk),
+                                   BN_bn2hex(g_shssaka_devicesKeys[0].sk));
   for (int i = 1; i < currentNumberOfDevices; i++)
   {
     message = g_strconcat(message, g_strdup_printf("--- Device %d ---\nID:\t%u\nPK:\t%s\nSK:\t%s\n\n",
-                                                   i, g_ssaka_devicesKeys[i].ID, BN_bn2hex(g_ssaka_devicesKeys[i].pk),
-                                                   BN_bn2hex(g_ssaka_devicesKeys[i].sk)));
+                                                   i, g_shssaka_devicesKeys[i].ID, BN_bn2hex(g_shssaka_devicesKeys[i].pk),
+                                                   BN_bn2hex(g_shssaka_devicesKeys[i].sk)));
   }
   message = g_strconcat(message, g_strdup_printf("\nEscape by pressing ESC ..."));
 

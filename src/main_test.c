@@ -15,7 +15,7 @@
 // Keychains
 struct aka_Keychain g_serverKeys;
 struct aka_Keychain g_aka_clientKeys;
-extern struct ssaka_Keychain g_ssaka_devicesKeys[G_NUMOFDEVICES];
+extern struct shssaka_Keychain g_shssaka_devicesKeys[G_NUMOFDEVICES];
 
 struct paillier_Keychain g_paiKeys;
 EC_POINT *pk_c;
@@ -127,7 +127,7 @@ int main(void)
     // pre_message = 1;
     // pre_noise = 1; 
 
-    err = ssaka_setup();
+    err = shssaka_setup();
     if (err != 1)
     {
         printf(" * SSAKA setup failed!\n");
@@ -135,7 +135,7 @@ int main(void)
         goto end;
     }
 
-    err = ssaka_ClientAddShare(3);
+    err = shssaka_ClientAddShare(3);
     if(err != 1)
     {
         printf(" * AddShare failed!\n");
@@ -145,12 +145,12 @@ int main(void)
     printf("\n+++ ADDED! +++\n");
     for (int j = 1; j < currentNumberOfDevices; j++) {
         printf("--- DEVICE %d ---\n", j);
-        ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
+        shssaka_keyPrinter(&g_shssaka_devicesKeys[j]);
     }
 
     unsigned int remove[] = {1, 3};
     unsigned int size_remove = sizeof(remove)/sizeof(unsigned int);
-    err = ssaka_ClientRevShare(remove, size_remove);
+    err = shssaka_ClientRevShare(remove, size_remove);
     if(err != 1)
     {
         printf(" * RevShare failed!\n");
@@ -161,10 +161,10 @@ int main(void)
     printf("\n--- REMOVED ---\n");
     for (int j = 1; j < currentNumberOfDevices; j++) {
         printf("--- DEVICE %d ---\n", j);
-        ssaka_keyPrinter(&g_ssaka_devicesKeys[j]);
+        shssaka_keyPrinter(&g_shssaka_devicesKeys[j]);
     }
 
-    err = ssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
+    err = shssaka_akaServerSignVerify(list_of_all_devs, size_all, message, &server);
     if(err != 1)
     {
         printf(" * SSAKA Server Sign Verify failed!\n");
@@ -174,7 +174,7 @@ int main(void)
 
     printf("ERR:\t%d\nTAU:\t%s\n", err, BN_bn2dec(server.tau_s));
 
-    err = ssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
+    err = shssaka_akaServerSignVerify(list_of_used_devs, size_used, message, &server);
     if (err != 1)
     {
         printf(" * SSAKA Server Sign Verify failed!\n");
@@ -187,7 +187,7 @@ int main(void)
 end:
     printf("\n\nRETURN_CODE: %u\n", return_code);
 
-    free_ssaka_mem();
+    free_shssaka_mem();
     free_schnorr_keychain(g_globals.keychain);
     free(g_globals.keychain);
     free_serversign(&server);
@@ -244,12 +244,12 @@ end:
 
     for (int i = 0; i < currentNumberOfDevices; i++)
     {
-        g_ssaka_devicesKeys[i].ID = g_globals.idCounter++;
-        g_ssaka_devicesKeys[i].pk = BN_new();
-        g_ssaka_devicesKeys[i].sk = BN_new();
-        g_ssaka_devicesKeys[i].kappa = BN_new();
+        g_shssaka_devicesKeys[i].ID = g_globals.idCounter++;
+        g_shssaka_devicesKeys[i].pk = BN_new();
+        g_shssaka_devicesKeys[i].sk = BN_new();
+        g_shssaka_devicesKeys[i].kappa = BN_new();
 
-        err = rand_range(g_ssaka_devicesKeys[i].pk, order);
+        err = rand_range(g_shssaka_devicesKeys[i].pk, order);
         if (err != 1)
         {
             printf(" * Generation of a random public key failed!\n");
@@ -284,9 +284,9 @@ end:
 
     for (int i = 0; i < currentNumberOfDevices; i++)
     {
-        BN_free(g_ssaka_devicesKeys[i].pk);
-        BN_free(g_ssaka_devicesKeys[i].sk);
-        BN_free(g_ssaka_devicesKeys[i].kappa);
+        BN_free(g_shssaka_devicesKeys[i].pk);
+        BN_free(g_shssaka_devicesKeys[i].sk);
+        BN_free(g_shssaka_devicesKeys[i].kappa);
     }
 
     BN_CTX_free(ctx);

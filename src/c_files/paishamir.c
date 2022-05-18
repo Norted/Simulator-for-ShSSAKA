@@ -67,7 +67,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
         {
             sprintf(str_i, "%d", j);
             BN_dec2bn(&str_bn, str_i);
-            err = BN_mod_exp(xs[j], g_ssaka_devicesKeys[i].pk, str_bn, order, ctx);
+            err = BN_mod_exp(xs[j], g_shssaka_devicesKeys[i].pk, str_bn, order, ctx);
             if (err != 1)
             {
                 printf(" * Computation of XS %d failed! (paiShamir_get_ci, paishamir)\n", j);
@@ -105,7 +105,7 @@ unsigned int paiShamir_distribution(struct paillier_Keychain *paikeys)
             printf(" * Compute C %d failed!", i);
             goto end;
         }
-        err = paiShamir_get_share(paikeys, cN_prime, c, order, g_ssaka_devicesKeys[i].sk);
+        err = paiShamir_get_share(paikeys, cN_prime, c, order, g_shssaka_devicesKeys[i].sk);
         if (err != 1)
         {
             printf(" * Get SHARE (%d) failed! (paiShamir_distribution, paishamir)\n", i);
@@ -362,12 +362,12 @@ unsigned int part_interpolation(unsigned int *devices_list, unsigned int size_of
         goto end;
     }
 
-    BN_copy(sk_i, g_ssaka_devicesKeys[devices_list[current_device]].sk);
+    BN_copy(sk_i, g_shssaka_devicesKeys[devices_list[current_device]].sk);
     for (int i = 0; i < size_of_list; i++)
     {
         if (current_device == i)
             continue;
-        err = BN_mod_sub(sub, g_ssaka_devicesKeys[devices_list[i]].pk, g_ssaka_devicesKeys[devices_list[current_device]].pk, mod, ctx);
+        err = BN_mod_sub(sub, g_shssaka_devicesKeys[devices_list[i]].pk, g_shssaka_devicesKeys[devices_list[current_device]].pk, mod, ctx);
         if (err != 1)
         {
             printf(" * Computation of SUB (%d) failed! (part_interpolation, paishamir)\n", i);
@@ -378,7 +378,7 @@ unsigned int part_interpolation(unsigned int *devices_list, unsigned int size_of
             printf(" * Computation of INV (%d) failed! (part_interpolation, paishamir)\n", i);
             goto end;
         }
-        err = BN_mod_mul(tmp_mul, g_ssaka_devicesKeys[devices_list[i]].pk, inv, mod, ctx);
+        err = BN_mod_mul(tmp_mul, g_shssaka_devicesKeys[devices_list[i]].pk, inv, mod, ctx);
         if (err != 1)
         {
             printf(" * Computation of TMP_MUL (%d) failed! (part_interpolation, paishamir)\n", i);
